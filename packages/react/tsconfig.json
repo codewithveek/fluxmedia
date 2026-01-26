@@ -3,7 +3,11 @@
     "compilerOptions": {
         "outDir": "./dist",
         "rootDir": "./src",
-        "composite": true
+        "lib": [
+            "ES2020",
+            "DOM"
+        ],
+        "jsx": "react-jsx"
     },
     "include": [
         "src/**/*"
@@ -13,5 +17,10 @@
         "dist",
         "**/__tests__/**",
         "**/*.test.ts"
+    ],
+    "references": [
+        {
+            "path": "../core"
+        }
     ]
 }

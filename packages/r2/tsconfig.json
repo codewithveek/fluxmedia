@@ -2,8 +2,7 @@
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src",
-        "composite": true
+        "rootDir": "./src"
     },
     "include": [
         "src/**/*"
@@ -13,5 +12,10 @@
         "dist",
         "**/__tests__/**",
         "**/*.test.ts"
+    ],
+    "references": [
+        {
+            "path": "../core"
+        }
     ]
 }
