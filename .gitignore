@@ -43,3 +43,4 @@ Thumbs.db
 .turbo/
 .changeset/*.md
 !.changeset/README.md
+fluxmedia-master-spec (1).md
