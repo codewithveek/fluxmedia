@@ -15,17 +15,16 @@
   ],
   "scripts": {
     "build": "pnpm -r --filter './packages/*' run build",
+    "clean": "pnpm -r run clean",
+    "dev": "pnpm -r run dev",
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "type-check": "tsc --build",
-    "clean": "pnpm -r run clean && rm -rf node_modules",
     "changeset": "changeset",
-    "version-packages": "changeset version",
-    "publish-packages": "pnpm build && changeset publish"
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",
