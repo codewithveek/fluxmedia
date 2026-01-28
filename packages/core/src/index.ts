@@ -11,5 +11,14 @@ export type {
 // Export errors
 export { MediaError, MediaErrorCode, createMediaError } from './errors';
 
+// Export plugins
+export {
+    PluginManager,
+    createPlugin,
+    type FluxMediaPlugin,
+    type PluginHooks,
+} from './plugin';
+
 // Export main class
 export { MediaUploader } from './media-uploader';
+

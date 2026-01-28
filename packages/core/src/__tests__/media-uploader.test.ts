@@ -119,30 +119,37 @@ describe('MediaUploader', () => {
     });
 
     describe('uploadMultiple', () => {
-        it('should delegate uploadMultiple to provider', async () => {
+        it('should upload each file individually (for plugin support)', async () => {
             const mockProvider = new MockProvider();
-            const mockResults = [mockResult, { ...mockResult, id: 'test-id-2' }];
-            mockProvider.uploadMultiple.mockResolvedValue(mockResults);
+            const mockResult2 = { ...mockResult, id: 'test-id-2' };
+            mockProvider.upload
+                .mockResolvedValueOnce(mockResult)
+                .mockResolvedValueOnce(mockResult2);
 
             const uploader = new MediaUploader(mockProvider);
             const files = [Buffer.from('test1'), Buffer.from('test2')];
             const results = await uploader.uploadMultiple(files);
 
-            expect(mockProvider.uploadMultiple).toHaveBeenCalledWith(files, undefined);
-            expect(results).toBe(mockResults);
+            expect(mockProvider.upload).toHaveBeenCalledTimes(2);
+            expect(results).toHaveLength(2);
+            expect(results[0]).toBe(mockResult);
+            expect(results[1]).toBe(mockResult2);
         });
     });
 
     describe('deleteMultiple', () => {
-        it('should delegate deleteMultiple to provider', async () => {
+        it('should delete each file individually (for plugin support)', async () => {
             const mockProvider = new MockProvider();
-            mockProvider.deleteMultiple.mockResolvedValue();
+            mockProvider.delete.mockResolvedValue();
 
             const uploader = new MediaUploader(mockProvider);
             const ids = ['id1', 'id2', 'id3'];
             await uploader.deleteMultiple(ids);
 
-            expect(mockProvider.deleteMultiple).toHaveBeenCalledWith(ids);
+            expect(mockProvider.delete).toHaveBeenCalledTimes(3);
+            expect(mockProvider.delete).toHaveBeenNthCalledWith(1, 'id1');
+            expect(mockProvider.delete).toHaveBeenNthCalledWith(2, 'id2');
+            expect(mockProvider.delete).toHaveBeenNthCalledWith(3, 'id3');
         });
     });
 

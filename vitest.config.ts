@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
     test: {
@@ -20,6 +21,12 @@ export default defineConfig({
                 branches: 80,
                 statements: 80,
             },
+        },
+    },
+    resolve: {
+        alias: {
+            '@fluxmedia/core/testing': path.resolve(__dirname, 'packages/core/src/testing.ts'),
+            '@fluxmedia/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
         },
     },
 });

@@ -5,6 +5,7 @@ import type {
     TransformationOptions,
     SearchOptions,
 } from './types';
+import { PluginManager, type FluxMediaPlugin } from './plugin';
 
 /**
  * Main entry point for FluxMedia.
@@ -23,17 +24,21 @@ import type {
  *   })
  * );
  *
- * const result = await uploader.upload(file, {
- *   folder: 'avatars',
- *   transformation: {
- *     width: 400,
- *     height: 400,
- *     fit: 'cover',
- *     format: 'webp'
+ * // Register plugins
+ * uploader.use({
+ *   name: 'logger',
+ *   hooks: {
+ *     beforeUpload: async (file, options) => {
+ *       console.log('Uploading:', file);
+ *       return { file, options };
+ *     }
  *   }
  * });
  *
- * console.log(result.url);
+ * const result = await uploader.upload(file, {
+ *   folder: 'avatars',
+ *   transformation: { width: 400, format: 'webp' }
+ * });
  * ```
  */
 export class MediaUploader {
@@ -43,53 +48,97 @@ export class MediaUploader {
     public readonly provider: MediaProvider;
 
     /**
+     * Plugin manager with caching and override support
+     */
+    public readonly plugins: PluginManager;
+
+    /**
      * Create a new MediaUploader instance.
      *
      * @param provider - Provider implementation (e.g., CloudinaryProvider, S3Provider)
+     * @param plugins - Optional array of plugins to register on creation
      */
-    constructor(provider: MediaProvider) {
+    constructor(provider: MediaProvider, plugins?: FluxMediaPlugin[]) {
         this.provider = provider;
+        this.plugins = new PluginManager();
+
+        // Register initial plugins if provided
+        if (plugins?.length) {
+            // Use sync registration for constructor (plugins can use async init)
+            for (const plugin of plugins) {
+                this.plugins.register(plugin);
+            }
+        }
+    }
+
+    /**
+     * Register a plugin.
+     * If a plugin with the same name exists, it will be overridden (last takes precedence).
+     *
+     * @param plugin - Plugin to register
+     * @returns Promise resolving to this uploader for chaining
+     *
+     * @example
+     * ```typescript
+     * await uploader
+     *   .use(loggerPlugin)
+     *   .use(compressionPlugin)
+     *   .use(validationPlugin);
+     * ```
+     */
+    async use(plugin: FluxMediaPlugin): Promise<this> {
+        await this.plugins.register(plugin);
+        return this;
     }
 
     /**
      * Upload a file to the configured provider.
+     * Runs beforeUpload and afterUpload plugin hooks.
      *
      * @param file - File to upload (browser File or Node.js Buffer)
      * @param options - Upload options
      * @returns Promise resolving to upload result
      * @throws {MediaError} If upload fails
-     *
-     * @example
-     * ```typescript
-     * const result = await uploader.upload(file, {
-     *   folder: 'uploads',
-     *   tags: ['user-content'],
-     *   transformation: {
-     *     width: 800,
-     *     quality: 80,
-     *     format: 'webp'
-     *   }
-     * });
-     * ```
      */
     async upload(file: File | Buffer, options?: UploadOptions): Promise<UploadResult> {
-        return this.provider.upload(file, options);
+        // Run beforeUpload hooks
+        const { file: processedFile, options: processedOptions } =
+            await this.plugins.runBeforeUpload(file, options ?? {});
+
+        try {
+            // Perform the actual upload
+            let result = await this.provider.upload(processedFile, processedOptions);
+
+            // Run afterUpload hooks
+            result = await this.plugins.runAfterUpload(result);
+
+            return result;
+        } catch (error) {
+            // Run onError hooks
+            await this.plugins.runOnError(
+                error instanceof Error ? error : new Error(String(error)),
+                { file: processedFile, options: processedOptions }
+            );
+            throw error;
+        }
     }
 
     /**
      * Delete a file by its ID.
+     * Runs beforeDelete and afterDelete plugin hooks.
      *
      * @param id - File identifier from upload result
      * @returns Promise that resolves when deletion is complete
      * @throws {MediaError} If deletion fails
-     *
-     * @example
-     * ```typescript
-     * await uploader.delete('my-file-id');
-     * ```
      */
     async delete(id: string): Promise<void> {
-        return this.provider.delete(id);
+        // Run beforeDelete hooks
+        const processedId = await this.plugins.runBeforeDelete(id);
+
+        await this.provider.delete(processedId);
+
+        // Run afterDelete hooks
+        await this.plugins.runAfterDelete(processedId);
     }
 
     /**
@@ -98,12 +147,6 @@ export class MediaUploader {
      * @param id - File identifier
      * @returns Promise resolving to file metadata
      * @throws {MediaError} If file not found
-     *
-     * @example
-     * ```typescript
-     * const metadata = await uploader.get('my-file-id');
-     * console.log(metadata.size, metadata.format);
-     * ```
      */
     async get(id: string): Promise<UploadResult> {
         return this.provider.get(id);
@@ -111,27 +154,30 @@ export class MediaUploader {
 
     /**
      * Generate a URL for accessing a file, optionally with transformations.
+     * Runs beforeGetUrl plugin hooks.
      *
      * @param id - File identifier
      * @param transform - Optional transformation options
      * @returns URL string
-     *
-     * @example
-     * ```typescript
-     * // Basic URL
-     * const url = uploader.getUrl('my-file-id');
-     *
-     * // With transformations
-     * const thumbnail = uploader.getUrl('my-file-id', {
-     *   width: 200,
-     *   height: 200,
-     *   fit: 'cover',
-     *   format: 'webp'
-     * });
-     * ```
      */
     getUrl(id: string, transform?: TransformationOptions): string {
+        // Note: This is sync so we can't run async hooks here.
+        // For async URL generation, use getUrlAsync.
         return this.provider.getUrl(id, transform);
+    }
+
+    /**
+     * Generate a URL with async plugin hook support.
+     *
+     * @param id - File identifier
+     * @param transform - Optional transformation options
+     * @returns Promise resolving to URL string
+     */
+    async getUrlAsync(id: string, transform?: TransformationOptions): Promise<string> {
+        const { id: processedId, transform: processedTransform } =
+            await this.plugins.runBeforeGetUrl(id, transform);
+
+        return this.provider.getUrl(processedId, processedTransform);
     }
 
     /**
@@ -141,20 +187,17 @@ export class MediaUploader {
      * @param options - Upload options (applied to all files)
      * @returns Promise resolving to array of upload results
      * @throws {MediaError} If any upload fails
-     *
-     * @example
-     * ```typescript
-     * const results = await uploader.uploadMultiple([file1, file2, file3], {
-     *   folder: 'batch-upload',
-     *   tags: ['bulk']
-     * });
-     * ```
      */
     async uploadMultiple(
         files: File[] | Buffer[],
         options?: UploadOptions
     ): Promise<UploadResult[]> {
-        return this.provider.uploadMultiple(files, options);
+        // Use individual upload to ensure plugins run for each file
+        const results: UploadResult[] = [];
+        for (const file of files) {
+            results.push(await this.upload(file, options));
+        }
+        return results;
     }
 
     /**
@@ -163,14 +206,12 @@ export class MediaUploader {
      * @param ids - Array of file identifiers
      * @returns Promise that resolves when all deletions are complete
      * @throws {MediaError} If any deletion fails
-     *
-     * @example
-     * ```typescript
-     * await uploader.deleteMultiple(['id1', 'id2', 'id3']);
-     * ```
      */
     async deleteMultiple(ids: string[]): Promise<void> {
-        return this.provider.deleteMultiple(ids);
+        // Use individual delete to ensure plugins run for each file
+        for (const id of ids) {
+            await this.delete(id);
+        }
     }
 
     /**
@@ -179,15 +220,6 @@ export class MediaUploader {
      * @param query - Search options
      * @returns Promise resolving to matching files
      * @throws {MediaError} If search fails or not supported
-     *
-     * @example
-     * ```typescript
-     * const results = await uploader.search({
-     *   query: 'cat',
-     *   tags: ['animals'],
-     *   limit: 20
-     * });
-     * ```
      */
     async search(query: SearchOptions): Promise<UploadResult[]> {
         if (!this.provider.search) {
@@ -201,13 +233,6 @@ export class MediaUploader {
      *
      * @param feature - Feature path (e.g., 'transformations.resize')
      * @returns Whether the feature is supported
-     *
-     * @example
-     * ```typescript
-     * if (uploader.supports('transformations.resize')) {
-     *   // Use resize transformation
-     * }
-     * ```
      */
     supports(feature: string): boolean {
         const parts = feature.split('.');
