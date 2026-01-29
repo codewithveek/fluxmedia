@@ -1,0 +1,75 @@
+# Providers
+
+FluxMedia supports multiple cloud storage providers through a unified API.
+
+## Available Providers
+
+| Provider | Package | Transformations | Video Processing |
+|----------|---------|-----------------|------------------|
+| Cloudinary | `@fluxmedia/cloudinary` | ✅ Full | ✅ Yes |
+| AWS S3 | `@fluxmedia/s3` | ❌ No | ❌ No |
+| Cloudflare R2 | `@fluxmedia/r2` | ❌ No | ❌ No |
+
+## Choosing a Provider
+
+### Cloudinary
+Best for: **Applications needing image/video transformations**
+
+- Resize, crop, format conversion on-the-fly
+- AI-powered tagging and face detection
+- Video transcoding and streaming
+- Higher cost but more features
+
+### AWS S3
+Best for: **Simple file storage with AWS integration**
+
+- Reliable and widely used
+- Integrates well with AWS ecosystem
+- Use with CloudFront + Lambda@Edge for transformations
+- Pay only for storage and transfer
+
+### Cloudflare R2
+Best for: **Cost-effective storage with zero egress fees**
+
+- S3-compatible API
+- No egress fees (great for high-traffic)
+- Use with Cloudflare Images for transformations
+- Fast global distribution via Cloudflare network
+
+## Custom Providers
+
+You can create custom providers by implementing the `MediaProvider` interface:
+
+```typescript
+import type { MediaProvider, UploadResult } from '@fluxmedia/core';
+
+class MyProvider implements MediaProvider {
+  name = 'my-provider';
+  
+  features = {
+    transformations: { resize: false, crop: false, ... },
+    capabilities: { signedUploads: true, ... },
+    storage: { maxFileSize: 100_000_000, supportedFormats: ['*'] },
+  };
+
+  async upload(file, options) {
+    // Your upload logic
+    return { id, url, ... };
+  }
+
+  async delete(id) { ... }
+  async get(id) { ... }
+  getUrl(id, transform?) { ... }
+  async uploadMultiple(files, options) { ... }
+  async deleteMultiple(ids) { ... }
+  get native() { return this.client; }
+}
+```
+
+Use contract tests to verify your provider:
+
+```typescript
+import { createProviderContractTests } from '@fluxmedia/core/testing';
+
+createProviderContractTests('MyProvider', () => new MyProvider({ ... }));
+```

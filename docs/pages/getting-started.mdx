@@ -1,0 +1,128 @@
+# Getting Started
+
+Learn how to install and configure FluxMedia in your project.
+
+## Installation
+
+Choose your package manager:
+
+```bash npm2yarn
+npm install @fluxmedia/core @fluxmedia/cloudinary
+```
+
+### Available Packages
+
+Install only what you need:
+
+```bash
+# Core (required)
+pnpm add @fluxmedia/core
+
+# Pick a provider
+pnpm add @fluxmedia/cloudinary  # Full featured with transformations
+pnpm add @fluxmedia/s3          # AWS S3
+pnpm add @fluxmedia/r2          # Cloudflare R2
+
+# Optional: React integration
+pnpm add @fluxmedia/react
+```
+
+## Basic Usage
+
+### Node.js / Server
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+
+// Create uploader with your provider
+const uploader = new MediaUploader(
+  new CloudinaryProvider({
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
+  })
+);
+
+// Upload a file
+const result = await uploader.upload(fileBuffer, {
+  folder: 'user-avatars',
+  filename: 'avatar-123',
+});
+
+console.log(result.url);     // https://res.cloudinary.com/...
+console.log(result.id);      // user-avatars/avatar-123
+console.log(result.format);  // jpg
+```
+
+### With React
+
+```tsx
+import { useMediaUpload } from '@fluxmedia/react';
+
+function UploadButton() {
+  const { upload, uploading, progress, result, error } = useMediaUpload({
+    mode: 'signed',
+    signUrlEndpoint: '/api/upload/sign',
+  });
+
+  return (
+    <input
+      type="file"
+      disabled={uploading}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) upload(file);
+      }}
+    />
+  );
+}
+```
+
+## Switching Providers
+
+The main benefit of FluxMedia is provider switching without code changes:
+
+```typescript
+// Before: Cloudinary
+const uploader = new MediaUploader(
+  new CloudinaryProvider({ ... })
+);
+
+// After: Switch to S3 - same code works!
+import { S3Provider } from '@fluxmedia/s3';
+
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'us-east-1',
+    bucket: 'my-bucket',
+    accessKeyId: process.env.AWS_ACCESS_KEY!,
+    secretAccessKey: process.env.AWS_SECRET_KEY!,
+  })
+);
+
+// All your upload code stays exactly the same
+await uploader.upload(file, { folder: 'uploads' });
+```
+
+## Feature Detection
+
+Check if a provider supports specific features:
+
+```typescript
+if (uploader.supports('transformations.resize')) {
+  // Apply resize transformation
+  const url = uploader.getUrl(id, { width: 200, height: 200 });
+}
+
+if (uploader.supports('capabilities.videoProcessing')) {
+  // Provider supports video processing
+}
+```
+
+## Next Steps
+
+- [Providers](/providers) - Configure Cloudinary, S3, R2
+- [Plugins](/plugins) - Extend with custom functionality
+- [React Integration](/react) - Hooks and components
+- [API Reference](/api) - Full API documentation

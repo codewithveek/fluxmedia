@@ -1,0 +1,231 @@
+# API Reference
+
+Complete API documentation for FluxMedia packages.
+
+## MediaUploader
+
+The main class for uploading files.
+
+### Constructor
+
+```typescript
+new MediaUploader(provider: MediaProvider, plugins?: FluxMediaPlugin[])
+```
+
+### Methods
+
+#### upload(file, options?)
+
+Upload a single file.
+
+```typescript
+async upload(file: File | Buffer, options?: UploadOptions): Promise<UploadResult>
+```
+
+#### delete(id)
+
+Delete a file by ID.
+
+```typescript
+async delete(id: string): Promise<void>
+```
+
+#### get(id)
+
+Get file metadata.
+
+```typescript
+async get(id: string): Promise<UploadResult>
+```
+
+#### getUrl(id, transform?)
+
+Generate a URL, optionally with transformations.
+
+```typescript
+getUrl(id: string, transform?: TransformationOptions): string
+```
+
+#### uploadMultiple(files, options?)
+
+Upload multiple files.
+
+```typescript
+async uploadMultiple(files: File[] | Buffer[], options?: UploadOptions): Promise<UploadResult[]>
+```
+
+#### deleteMultiple(ids)
+
+Delete multiple files.
+
+```typescript
+async deleteMultiple(ids: string[]): Promise<void>
+```
+
+#### supports(feature)
+
+Check if provider supports a feature.
+
+```typescript
+supports(feature: string): boolean
+```
+
+#### use(plugin)
+
+Register a plugin.
+
+```typescript
+async use(plugin: FluxMediaPlugin): Promise<this>
+```
+
+---
+
+## Types
+
+### UploadOptions
+
+```typescript
+interface UploadOptions {
+  folder?: string;
+  filename?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  transformation?: TransformationOptions;
+  onProgress?: (percent: number) => void;
+}
+```
+
+### UploadResult
+
+```typescript
+interface UploadResult {
+  id: string;
+  url: string;
+  publicUrl: string;
+  size: number;
+  format: string;
+  width?: number;
+  height?: number;
+  provider: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+}
+```
+
+### TransformationOptions
+
+```typescript
+interface TransformationOptions {
+  width?: number;
+  height?: number;
+  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+  quality?: number | 'auto';
+  format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'png';
+  blur?: number;
+  rotate?: number;
+}
+```
+
+### MediaProvider
+
+```typescript
+interface MediaProvider {
+  readonly name: string;
+  readonly features: ProviderFeatures;
+  readonly native: unknown;
+
+  upload(file: File | Buffer, options?: UploadOptions): Promise<UploadResult>;
+  delete(id: string): Promise<void>;
+  get(id: string): Promise<UploadResult>;
+  getUrl(id: string, transform?: TransformationOptions): string;
+  uploadMultiple(files: File[] | Buffer[], options?: UploadOptions): Promise<UploadResult[]>;
+  deleteMultiple(ids: string[]): Promise<void>;
+  search?(query: SearchOptions): Promise<UploadResult[]>;
+}
+```
+
+### ProviderFeatures
+
+```typescript
+interface ProviderFeatures {
+  transformations: {
+    resize: boolean;
+    crop: boolean;
+    format: boolean;
+    quality: boolean;
+    blur: boolean;
+    rotate: boolean;
+    effects: boolean;
+  };
+  capabilities: {
+    signedUploads: boolean;
+    directUpload: boolean;
+    multipartUpload: boolean;
+    videoProcessing: boolean;
+    aiTagging: boolean;
+    facialDetection: boolean;
+  };
+  storage: {
+    maxFileSize: number;
+    supportedFormats: string[];
+  };
+}
+```
+
+---
+
+## Errors
+
+### MediaError
+
+```typescript
+class MediaError extends Error {
+  code: MediaErrorCode;
+  provider: string;
+  originalError?: Error;
+}
+```
+
+### MediaErrorCode
+
+```typescript
+enum MediaErrorCode {
+  UPLOAD_FAILED = 'UPLOAD_FAILED',
+  DELETE_FAILED = 'DELETE_FAILED',
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
+  INVALID_FILE = 'INVALID_FILE',
+  PROVIDER_ERROR = 'PROVIDER_ERROR',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  TIMEOUT = 'TIMEOUT',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+}
+```
+
+---
+
+## Plugin Types
+
+### FluxMediaPlugin
+
+```typescript
+interface FluxMediaPlugin {
+  name: string;
+  version?: string;
+  hooks: PluginHooks;
+  init?: () => Promise<void> | void;
+  destroy?: () => Promise<void> | void;
+}
+```
+
+### PluginHooks
+
+```typescript
+interface PluginHooks {
+  beforeUpload?: (file, options) => Promise<{ file, options } | void>;
+  afterUpload?: (result) => Promise<UploadResult>;
+  onError?: (error, context) => Promise<void>;
+  beforeDelete?: (id) => Promise<string | void>;
+  afterDelete?: (id) => Promise<void>;
+  beforeGetUrl?: (id, transform?) => Promise<{ id, transform? } | void>;
+}
+```

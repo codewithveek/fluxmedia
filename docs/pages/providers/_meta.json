@@ -1,0 +1,6 @@
+{
+    "index": "Overview",
+    "cloudinary": "Cloudinary",
+    "s3": "AWS S3",
+    "r2": "Cloudflare R2"
+}

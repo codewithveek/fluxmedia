@@ -1,0 +1,77 @@
+# FluxMedia
+
+**Provider-agnostic media uploads for JavaScript**
+
+FluxMedia is a unified API for uploading images, videos, and files to any cloud storage provider. Switch providers with one line of code.
+
+## Features
+
+- 🔌 **Provider Agnostic** - Switch between Cloudinary, S3, R2, and more
+- 🔄 **Unified API** - Same code works with any provider
+- ⚛️ **React Hooks** - `useMediaUpload` for easy integration
+- 🔌 **Plugin System** - Extend functionality with plugins
+- 📦 **Tree-shakeable** - Only bundle what you use
+- 🧪 **Fully Tested** - 83+ tests across all packages
+
+## Quick Start
+
+```bash
+pnpm add @fluxmedia/core @fluxmedia/cloudinary
+```
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+
+const uploader = new MediaUploader(
+  new CloudinaryProvider({
+    cloudName: 'your-cloud',
+    apiKey: 'your-key',
+    apiSecret: 'your-secret',
+  })
+);
+
+const result = await uploader.upload(file, {
+  folder: 'uploads',
+  transformation: { width: 800, format: 'webp' },
+});
+
+console.log(result.url);
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@fluxmedia/core` | Core types and MediaUploader class |
+| `@fluxmedia/cloudinary` | Cloudinary provider with transformations |
+| `@fluxmedia/s3` | AWS S3 provider |
+| `@fluxmedia/r2` | Cloudflare R2 provider |
+| `@fluxmedia/react` | React hooks and components |
+
+## Why FluxMedia?
+
+### Before FluxMedia
+
+```typescript
+// Tightly coupled to Cloudinary
+import cloudinary from 'cloudinary';
+cloudinary.v2.uploader.upload(file, { folder: 'uploads' });
+
+// Migrating to S3? Rewrite everything...
+```
+
+### With FluxMedia
+
+```typescript
+// Provider-agnostic
+import { MediaUploader } from '@fluxmedia/core';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+// OR
+import { S3Provider } from '@fluxmedia/s3';
+
+// Same API, switch providers instantly
+const uploader = new MediaUploader(new CloudinaryProvider({ ... }));
+// OR
+const uploader = new MediaUploader(new S3Provider({ ... }));
+```

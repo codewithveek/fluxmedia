@@ -1,0 +1,101 @@
+# AWS S3 Provider
+
+Simple, reliable file storage with the AWS ecosystem.
+
+## Installation
+
+```bash
+pnpm add @fluxmedia/core @fluxmedia/s3 @aws-sdk/client-s3
+```
+
+## Configuration
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { S3Provider } from '@fluxmedia/s3';
+
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'us-east-1',
+    bucket: 'my-media-bucket',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  })
+);
+```
+
+### Configuration Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `region` | string | ✅ | AWS region (e.g., 'us-east-1') |
+| `bucket` | string | ✅ | S3 bucket name |
+| `accessKeyId` | string | ✅ | AWS access key |
+| `secretAccessKey` | string | ✅ | AWS secret key |
+| `endpoint` | string | ❌ | Custom endpoint (for S3-compatible services) |
+| `forcePathStyle` | boolean | ❌ | Force path style URLs |
+
+## Basic Usage
+
+```typescript
+const result = await uploader.upload(file, {
+  folder: 'uploads',
+  filename: 'my-file.jpg',
+});
+
+console.log(result.url);
+// https://my-media-bucket.s3.us-east-1.amazonaws.com/uploads/my-file.jpg
+```
+
+## S3-Compatible Services
+
+Works with DigitalOcean Spaces, MinIO, and other S3-compatible services:
+
+```typescript
+// DigitalOcean Spaces
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'nyc3',
+    bucket: 'my-space',
+    accessKeyId: 'your-spaces-key',
+    secretAccessKey: 'your-spaces-secret',
+    endpoint: 'https://nyc3.digitaloceanspaces.com',
+    forcePathStyle: false,
+  })
+);
+
+// MinIO
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'us-east-1',
+    bucket: 'my-bucket',
+    accessKeyId: 'minio-access-key',
+    secretAccessKey: 'minio-secret-key',
+    endpoint: 'http://localhost:9000',
+    forcePathStyle: true,
+  })
+);
+```
+
+## Supported Features
+
+S3 is storage-only (no transformations):
+
+```typescript
+uploader.supports('transformations.resize')   // false
+uploader.supports('capabilities.signedUploads') // true
+uploader.supports('capabilities.multipartUpload') // true
+```
+
+## Environment Variables
+
+```bash
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_REGION=us-east-1
+S3_BUCKET=my-bucket
+```
+
+## Adding Transformations
+
+Use CloudFront + Lambda@Edge for image transformations, or consider [Cloudinary](/providers/cloudinary) for built-in support.

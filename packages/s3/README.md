@@ -20,7 +20,7 @@ const uploader = new MediaUploader(
     bucket: 'my-bucket',
     accessKeyId: 'your-access-key',
     secretAccessKey: 'your-secret-key'
-  })
+  }),
 );
 
 const result = await uploader.upload(file, {

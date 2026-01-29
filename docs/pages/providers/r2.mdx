@@ -1,0 +1,91 @@
+# Cloudflare R2 Provider
+
+Cost-effective storage with zero egress fees.
+
+## Installation
+
+```bash
+pnpm add @fluxmedia/core @fluxmedia/r2 @aws-sdk/client-s3
+```
+
+R2 uses the S3-compatible API, so it requires `@aws-sdk/client-s3`.
+
+## Configuration
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { R2Provider } from '@fluxmedia/r2';
+
+const uploader = new MediaUploader(
+  new R2Provider({
+    accountId: 'your-cloudflare-account-id',
+    bucket: 'my-bucket',
+    accessKeyId: 'your-r2-access-key',
+    secretAccessKey: 'your-r2-secret-key',
+    publicUrl: 'https://cdn.example.com', // Optional: custom domain
+  })
+);
+```
+
+### Configuration Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `accountId` | string | ✅ | Cloudflare account ID |
+| `bucket` | string | ✅ | R2 bucket name |
+| `accessKeyId` | string | ✅ | R2 API token access key |
+| `secretAccessKey` | string | ✅ | R2 API token secret key |
+| `publicUrl` | string | ❌ | Custom public URL for the bucket |
+
+## Getting R2 Credentials
+
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → R2
+2. Create a bucket
+3. Click "Manage R2 API Tokens"
+4. Create a token with read/write permissions
+5. Copy the Access Key ID and Secret Access Key
+
+## Basic Usage
+
+```typescript
+const result = await uploader.upload(file, {
+  folder: 'uploads',
+});
+
+console.log(result.url);
+// https://your-bucket.account-id.r2.cloudflarestorage.com/uploads/file.jpg
+
+// Or with custom public URL
+// https://cdn.example.com/uploads/file.jpg
+```
+
+## Why R2?
+
+- **Zero egress fees** - Free outbound data transfer
+- **S3-compatible** - Easy migration from S3
+- **Global distribution** - Cloudflare's edge network
+- **Cost-effective** - Only pay for storage and operations
+
+## Supported Features
+
+R2 is storage-only:
+
+```typescript
+uploader.supports('transformations.resize')   // false
+uploader.supports('capabilities.signedUploads') // true
+uploader.supports('capabilities.multipartUpload') // true
+```
+
+## Adding Transformations
+
+Use [Cloudflare Images](https://developers.cloudflare.com/images/) for image transformations, or consider [Cloudinary](/providers/cloudinary) for built-in support.
+
+## Environment Variables
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+R2_BUCKET=my-bucket
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_PUBLIC_URL=https://cdn.example.com
+```
