@@ -6,6 +6,12 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    platform: 'neutral',
+    platform: 'node',
     treeshake: true,
+    external: [
+        'vitest',
+        'stream',
+        'file-type',
+        'load-esm',
+    ],
 });

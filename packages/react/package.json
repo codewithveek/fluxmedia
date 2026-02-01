@@ -40,7 +40,7 @@
         "!dist/**/*.map"
     ],
     "scripts": {
-        "build": "tsdown",
+        "build": "tsup",
         "clean": "rm -rf dist",
         "dev": "tsdown --watch"
     },

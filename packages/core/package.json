@@ -50,9 +50,9 @@
         "!dist/**/*.map"
     ],
     "scripts": {
-        "build": "tsdown",
+        "build": "tsup",
         "clean": "rm -rf dist",
-        "dev": "tsdown --watch",
+        "dev": "tsup --watch",
         "test": "vitest",
         "test:coverage": "vitest --coverage"
     },
