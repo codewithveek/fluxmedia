@@ -41,7 +41,7 @@
         "!dist/**/*.map"
     ],
     "scripts": {
-        "build": "tsup",
+        "build": "tsdown",
         "clean": "rm -rf dist",
         "dev": "tsdown --watch"
     },
