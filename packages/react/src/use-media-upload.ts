@@ -157,6 +157,50 @@ export function useMediaUpload(config: UseMediaUploadConfig): UseMediaUploadRetu
 }
 
 /**
+ * Upload a file using XMLHttpRequest with real progress tracking
+ */
+function uploadWithProgress(
+    url: string,
+    options: {
+        method: 'PUT' | 'POST';
+        body: File | FormData;
+        headers?: Record<string, string>;
+        onProgress?: ((progress: number) => void) | undefined;
+        progressOffset?: number; // Start percentage (default: 0)
+        progressRange?: number; // Range for upload (default: 100)
+    }
+): Promise<{ status: number; response: string }> {
+    const { progressOffset = 0, progressRange = 100 } = options;
+
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Track upload progress via native event
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable && options.onProgress) {
+                const uploadProgress = (event.loaded / event.total) * progressRange;
+                options.onProgress(progressOffset + uploadProgress);
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            resolve({ status: xhr.status, response: xhr.responseText });
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+
+        xhr.open(options.method, url);
+        if (options.headers) {
+            Object.entries(options.headers).forEach(([key, value]) => {
+                xhr.setRequestHeader(key, value);
+            });
+        }
+        xhr.send(options.body);
+    });
+}
+
+/**
  * Upload using signed URL (recommended for production)
  */
 async function uploadSigned(
@@ -174,8 +218,8 @@ async function uploadSigned(
         throw new Error('signUrlEndpoint is required for signed mode');
     }
 
-    // Step 1: Get signed URL from server
-    onProgress?.(10);
+    // Step 1: Get signed URL from server (5% of progress)
+    onProgress?.(0);
     const signResponse = await fetch(config.signUrlEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,21 +237,21 @@ async function uploadSigned(
         throw new Error('Failed to get signed upload URL');
     }
 
+    onProgress?.(5);
     const { uploadUrl, fields, publicId, method, headers, publicUrl: signedPublicUrl } = await signResponse.json();
 
-    // Step 2: Upload to signed URL
-    onProgress?.(30);
-
-    let uploadResponse: Response;
+    // Step 2: Upload to signed URL with real progress tracking (5-95%)
+    let uploadResult: { status: number; response: string };
 
     if (method === 'PUT') {
         // S3/R2: Use PUT with raw file body
-        uploadResponse = await fetch(uploadUrl, {
+        uploadResult = await uploadWithProgress(uploadUrl, {
             method: 'PUT',
-            headers: {
-                ...headers,
-            },
             body: file,
+            headers: headers ?? {},
+            onProgress,
+            progressOffset: 5,
+            progressRange: 90,
         });
     } else {
         // Cloudinary: Use POST with FormData
@@ -219,24 +263,26 @@ async function uploadSigned(
         }
         formData.append('file', file);
 
-        uploadResponse = await fetch(uploadUrl, {
+        uploadResult = await uploadWithProgress(uploadUrl, {
             method: 'POST',
             body: formData,
+            onProgress,
+            progressOffset: 5,
+            progressRange: 90,
         });
     }
 
-    onProgress?.(90);
+    onProgress?.(95);
 
-    if (!uploadResponse.ok) {
+    if (uploadResult.status < 200 || uploadResult.status >= 300) {
         throw new Error('Upload failed');
     }
 
     // S3/R2 returns empty response on success, Cloudinary returns JSON
     let result: Record<string, unknown> = {};
-    const responseText = await uploadResponse.text();
-    if (responseText) {
+    if (uploadResult.response) {
         try {
-            result = JSON.parse(responseText);
+            result = JSON.parse(uploadResult.response);
         } catch {
             // S3/R2 may return empty or non-JSON response
         }
@@ -275,7 +321,8 @@ async function uploadProxy(
         throw new Error('proxyEndpoint is required for proxy mode');
     }
 
-    onProgress?.(10);
+    // Step 1: Prepare FormData (5% of progress)
+    onProgress?.(0);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -298,20 +345,24 @@ async function uploadProxy(
         formData.append('metadata', JSON.stringify(options.metadata));
     }
 
-    onProgress?.(30);
+    onProgress?.(5);
 
-    const response = await fetch(config.proxyEndpoint, {
+    // Step 2: Upload with real progress tracking (5-95%)
+    const uploadResult = await uploadWithProgress(config.proxyEndpoint, {
         method: 'POST',
         body: formData,
+        onProgress,
+        progressOffset: 5,
+        progressRange: 90,
     });
 
-    onProgress?.(90);
+    onProgress?.(95);
 
-    if (!response.ok) {
+    if (uploadResult.status < 200 || uploadResult.status >= 300) {
         throw new Error('Upload failed');
     }
 
-    const result = await response.json();
+    const result = JSON.parse(uploadResult.response);
 
     return {
         id: result.id,

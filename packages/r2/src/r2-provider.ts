@@ -296,13 +296,22 @@ export class R2Provider implements MediaProvider {
   }
 
   private generateKey(options?: UploadOptions): string {
-    const filename = options?.filename ?? this.generateRandomId();
+    const baseFilename = options?.filename ?? this.generateRandomId();
+    // When uniqueFilename is true (default) or not specified, append a short ID
+    const shouldMakeUnique = options?.uniqueFilename !== false;
+    const filename = shouldMakeUnique && options?.filename
+      ? `${baseFilename}-${this.generateShortId()}`
+      : baseFilename;
     const folder = options?.folder ? `${options.folder}/` : '';
     return `${folder}${filename}`;
   }
 
   private generateRandomId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  }
+
+  private generateShortId(): string {
+    return Math.random().toString(36).substring(2, 8);
   }
 
   private async getContentType(file: File | Buffer): Promise<string> {

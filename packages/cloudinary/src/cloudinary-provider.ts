@@ -131,14 +131,61 @@ export class CloudinaryProvider implements MediaProvider {
         return cloudinary.url(id, options);
     }
 
-    async uploadMultiple(files: File[] | Buffer[], options?: UploadOptions): Promise<UploadResult[]> {
-        const uploadPromises = files.map((file) => this.upload(file, options));
-        return Promise.all(uploadPromises);
+    async uploadMultiple(
+        files: File[] | Buffer[],
+        options?: UploadOptions & { concurrency?: number }
+    ): Promise<UploadResult[]> {
+        // Batched processing with concurrency control
+        const concurrency = options?.concurrency ?? 5;
+        const results: UploadResult[] = [];
+
+        for (let i = 0; i < files.length; i += concurrency) {
+            const batch = files.slice(i, i + concurrency);
+            const batchResults = await Promise.all(
+                batch.map((file) => {
+                    // Clone options for each file to avoid shared state
+                    const { concurrency: _, ...uploadOptions } = options ?? {};
+                    return this.upload(
+                        file,
+                        Object.keys(uploadOptions).length > 0 ? uploadOptions : undefined
+                    );
+                })
+            );
+            results.push(...batchResults);
+        }
+
+        return results;
     }
 
     async deleteMultiple(ids: string[]): Promise<void> {
-        const deletePromises = ids.map((id) => this.delete(id));
-        await Promise.all(deletePromises);
+        // Batched processing with concurrency control
+        const concurrency = 10;
+        const failed: Array<{ id: string; error: unknown }> = [];
+
+        for (let i = 0; i < ids.length; i += concurrency) {
+            const batch = ids.slice(i, i + concurrency);
+            // Use Promise.allSettled for partial failure handling
+            const results = await Promise.allSettled(
+                batch.map((id) => this.delete(id).then(() => ({ id })))
+            );
+
+            results.forEach((result, index) => {
+                const id = batch[index]!;
+                if (result.status === 'rejected') {
+                    failed.push({ id, error: result.reason });
+                }
+            });
+        }
+
+        if (failed.length > 0) {
+            throw createMediaError(
+                MediaErrorCode.DELETE_FAILED,
+                this.name,
+                new Error(
+                    `Failed to delete ${failed.length} of ${ids.length} files: ${failed.map((f) => f.id).join(', ')}`
+                )
+            );
+        }
     }
 
     get native(): unknown {
@@ -152,7 +199,11 @@ export class CloudinaryProvider implements MediaProvider {
             cloudinaryOptions.folder = options.folder;
         }
         if (options?.filename) {
-            cloudinaryOptions.public_id = options.filename;
+            // When uniqueFilename is true (default) or not specified, append a short ID
+            const shouldMakeUnique = options?.uniqueFilename !== false;
+            cloudinaryOptions.public_id = shouldMakeUnique
+                ? `${options.filename}-${this.generateShortId()}`
+                : options.filename;
         }
         if (options?.tags) {
             cloudinaryOptions.tags = options.tags;
@@ -172,6 +223,10 @@ export class CloudinaryProvider implements MediaProvider {
 
         cloudinaryOptions.resource_type = 'auto';
         return cloudinaryOptions;
+    }
+
+    private generateShortId(): string {
+        return Math.random().toString(36).substring(2, 8);
     }
 
     private mapTransformations(transform: TransformationOptions): Record<string, unknown> {

@@ -128,6 +128,13 @@ export interface UploadOptions {
      * Transformations to apply during upload
      */
     transformation?: TransformationOptions;
+
+    /**
+     * When true (default), generates unique filenames by appending a short ID
+     * to prevent overwriting existing files. Set to false to replace files
+     * with the same name.
+     */
+    uniqueFilename?: boolean;
 }
 
 /**
