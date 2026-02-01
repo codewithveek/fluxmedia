@@ -66,5 +66,9 @@
     },
     "engines": {
         "node": ">=20.0.0"
+    },
+    "dependencies": {
+        "file-type": "^21.3.0",
+        "load-esm": "^1.0.3"
     }
 }

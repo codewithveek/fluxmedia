@@ -72,6 +72,109 @@ interface UseMediaUploadReturn {
   result: UploadResult | null;
   error: Error | null;
   reset: () => void;
+  
+  // Preview functionality
+  preview: string | null;          // Object URL for preview
+  setPreview: (file: File | null) => void;  // Set preview from file
+  
+  // File type detection (magic bytes)
+  fileType: { mime: string; ext: string } | null;
+  detectFileType: (file: File) => Promise<{ mime: string; ext: string } | null>;
+}
+```
+
+## Preview Before Upload
+
+Show a preview of selected files before uploading:
+
+```tsx
+function UploadWithPreview() {
+  const { upload, preview, setPreview, uploading } = useMediaUpload({
+    mode: 'proxy',
+    proxyEndpoint: '/api/upload',
+  });
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreview(file);  // Creates object URL, handles cleanup
+      upload(file);
+    }
+  };
+
+  return (
+    <div>
+      {preview && <img src={preview} alt="Preview" />}
+      <input type="file" accept="image/*" onChange={handleSelect} />
+    </div>
+  );
+}
+```
+
+## File Type Detection
+
+Detect actual file type using magic bytes (more reliable than file extension):
+
+```tsx
+function ValidatedUpload() {
+  const { upload, detectFileType, fileType } = useMediaUpload({
+    mode: 'proxy',
+    proxyEndpoint: '/api/upload',
+  });
+
+  const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const type = await detectFileType(file);
+    
+    if (!type?.mime.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    await upload(file);
+  };
+
+  return (
+    <div>
+      <input type="file" onChange={handleSelect} />
+      {fileType && <p>Detected: {fileType.mime}</p>}
+    </div>
+  );
+}
+```
+
+## Provider Selection
+
+Pass provider selection to upload:
+
+```tsx
+function MultiProviderUpload() {
+  const [provider, setProvider] = useState<'cloudinary' | 's3' | 'r2'>('cloudinary');
+  const { upload } = useMediaUpload({
+    mode: 'proxy',
+    proxyEndpoint: '/api/upload',
+  });
+
+  const handleUpload = (file: File) => {
+    upload(file, {
+      folder: 'uploads',
+      provider,  // Passed to server endpoint
+      metadata: { description: 'User upload' },  // Custom metadata
+    });
+  };
+
+  return (
+    <div>
+      <select value={provider} onChange={(e) => setProvider(e.target.value as any)}>
+        <option value="cloudinary">Cloudinary</option>
+        <option value="s3">AWS S3</option>
+        <option value="r2">Cloudflare R2</option>
+      </select>
+      <input type="file" onChange={(e) => handleUpload(e.target.files![0])} />
+    </div>
+  );
 }
 ```
 

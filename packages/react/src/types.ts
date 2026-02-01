@@ -64,7 +64,15 @@ export interface UseMediaUploadReturn {
     /**
      * Upload a file
      */
-    upload: (file: File, options?: { folder?: string; tags?: string[] }) => Promise<UploadResult>;
+    upload: (
+        file: File,
+        options?: {
+            folder?: string;
+            tags?: string[];
+            provider?: string;
+            metadata?: Record<string, unknown>;
+        }
+    ) => Promise<UploadResult>;
 
     /**
      * Current upload state
@@ -90,6 +98,26 @@ export interface UseMediaUploadReturn {
      * Reset state
      */
     reset: () => void;
+
+    /**
+     * Preview URL for the selected file (created via URL.createObjectURL)
+     */
+    preview: string | null;
+
+    /**
+     * Set preview for a file (creates object URL for preview, handles cleanup)
+     */
+    setPreview: (file: File | null) => void;
+
+    /**
+     * Detected file type from magic bytes (more reliable than browser MIME type)
+     */
+    fileType: { mime: string; ext: string } | null;
+
+    /**
+     * Detect file type using magic bytes. Returns detected type and sets fileType state.
+     */
+    detectFileType: (file: File) => Promise<{ mime: string; ext: string } | null>;
 }
 
 /**

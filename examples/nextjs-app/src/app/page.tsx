@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMediaUpload, type UploadMode } from '@fluxmedia/react';
+import { useMediaUpload, type UploadMode, MediaUpload } from '@fluxmedia/react';
 
 type ProviderType = 'cloudinary' | 's3' | 'r2';
 
@@ -27,10 +27,10 @@ export default function Home() {
         if (!file) return;
 
         try {
-            // For proxy mode, we can pass provider in the options
+            // Pass selected provider to the upload API
             await upload(file, {
                 folder: 'nextjs-demo',
-                // Provider passed as custom metadata for proxy endpoint
+                provider,
             });
         } catch (err) {
             // Error is handled by onUploadError

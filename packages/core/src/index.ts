@@ -22,3 +22,11 @@ export {
 // Export main class
 export { MediaUploader } from './media-uploader';
 
+// Export file type utilities
+export {
+    getFileType,
+    getFileTypeFromStream,
+    isImage,
+    isVideo,
+    type FileTypeResult,
+} from './file-type';
