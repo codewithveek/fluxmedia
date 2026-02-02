@@ -56,3 +56,31 @@ export interface CloudinaryUploadResponse {
     secure_url: string;
     [key: string]: unknown;
 }
+
+/**
+ * Interface for the Cloudinary SDK client.
+ * Provides type safety for SDK method calls.
+ */
+export interface CloudinaryClient {
+    uploader: {
+        upload(
+            file: string | Buffer,
+            options?: CloudinaryUploadOptions
+        ): Promise<CloudinaryUploadResponse>;
+        destroy(
+            publicId: string,
+            options?: { resource_type?: string }
+        ): Promise<{ result: string }>;
+        explicit(
+            publicId: string,
+            options?: { type?: string }
+        ): Promise<CloudinaryUploadResponse>;
+    };
+    url(publicId: string, options?: Record<string, unknown>): string;
+    config(options: {
+        cloud_name: string;
+        api_key: string;
+        api_secret: string;
+        secure: boolean;
+    }): void;
+}

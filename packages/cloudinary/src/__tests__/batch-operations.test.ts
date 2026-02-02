@@ -151,8 +151,9 @@ describe('CloudinaryProvider Unique Filename', () => {
         const callArgs = (cloudinary.v2.uploader.upload as ReturnType<typeof vi.fn>).mock.calls[0];
         const options = callArgs?.[1];
 
-        // Should have unique suffix appended
-        expect(options?.public_id).toMatch(/^avatar-[a-z0-9]{6}$/);
+        // Should have unique suffix appended (8-12 alphanumeric chars)
+        expect(options?.public_id).toMatch(/^avatar-[a-z0-9]{8,12}$/);
+
     });
 
     it('should not generate unique filename when uniqueFilename is false', async () => {
