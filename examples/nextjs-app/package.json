@@ -9,23 +9,23 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@fluxmedia/core": "workspace:*",
-        "@fluxmedia/cloudinary": "workspace:*",
-        "@fluxmedia/r2": "workspace:*",
-        "@fluxmedia/s3": "workspace:*",
-        "@fluxmedia/react": "workspace:*",
         "@aws-sdk/client-s3": "^3.980.0",
         "@aws-sdk/lib-storage": "^3.980.0",
         "@aws-sdk/s3-request-presigner": "^3.980.0",
+        "@fluxmedia/cloudinary": "workspace:*",
+        "@fluxmedia/core": "workspace:*",
+        "@fluxmedia/r2": "workspace:*",
+        "@fluxmedia/react": "workspace:*",
+        "@fluxmedia/s3": "workspace:*",
         "cloudinary": "^2.9.0",
-        "next": "^15.1.0",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1"
+        "next": "^16.1.6",
+        "react": "^19.2.4"
     },
     "devDependencies": {
         "@types/node": "^22.19.4",
         "@types/react": "^18.3.1",
         "@types/react-dom": "^18.3.1",
+        "react-dom": "^19.2.4",
         "typescript": "^5.3.3"
     }
 }

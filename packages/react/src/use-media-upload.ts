@@ -179,7 +179,7 @@ function uploadWithProgress(
         xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable && options.onProgress) {
                 const uploadProgress = (event.loaded / event.total) * progressRange;
-                options.onProgress(progressOffset + uploadProgress);
+                options.onProgress(Math.floor(progressOffset + uploadProgress));
             }
         });
 

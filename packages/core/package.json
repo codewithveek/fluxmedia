@@ -65,7 +65,7 @@
         "access": "public"
     },
     "engines": {
-        "node": ">=21.0.0"
+        "node": ">=20.0.0"
     },
     "dependencies": {
         "file-type": "^21.3.0",
