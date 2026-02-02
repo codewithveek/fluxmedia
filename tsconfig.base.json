@@ -45,6 +45,9 @@
             ],
             "@fluxmedia/react": [
                 "./packages/react/src"
+            ],
+            "@fluxmedia/plugins": [
+                "./packages/plugins/src"
             ]
         }
     },
