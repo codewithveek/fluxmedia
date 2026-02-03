@@ -13,7 +13,7 @@
     "homepage": "https://fluxmedia.dev",
     "repository": {
         "type": "git",
-        "url": "https://github.com/darkcodewrangler/fluxmedia.git",
+        "url": "https://github.com/codewithveek/fluxmedia.git",
         "directory": "packages/cloudinary"
     },
     "license": "MIT",

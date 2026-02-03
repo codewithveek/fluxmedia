@@ -6,7 +6,7 @@
   "description": "Switch providers, not code - A TypeScript-first media library for uploading to Cloudinary, S3, R2, and more",
   "repository": {
     "type": "git",
-    "url": "https://github.com/darkcodewrangler/fluxmedia.git"
+    "url": "https://github.com/codewithveek/fluxmedia.git"
   },
   "license": "MIT",
   "author": "FluxMedia Contributors",
