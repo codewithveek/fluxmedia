@@ -50,7 +50,6 @@
     "devDependencies": {
         "@types/react": "^18.2.48",
         "react": "^18.2.0",
-        "tsdown": "^0.2.1",
         "typescript": "^5.3.3"
     },
     "peerDependencies": {
