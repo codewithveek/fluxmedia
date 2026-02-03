@@ -2,16 +2,16 @@
 
 **Switch providers, not code.**
 
-A TypeScript-first media management library that provides a unified API for uploading, managing, and serving media across multiple cloud providers (Cloudinary, AWS S3, Cloudflare R2, etc.).
+A TypeScript-first media management library that provides a unified API for uploading, managing, and serving media across multiple cloud providers (Cloudinary, AWS S3, Cloudflare R2, and more).
 
 ## Features
 
-- **Switch providers with one line of code** - No vendor lock-in
+- **Unified API** - Write once, use any provider
 - **Type-safe** - Full TypeScript support with intelligent autocomplete
 - **Tree-shakeable** - Only bundle what you use
 - **React integration** - Hooks and components included
-- **Extensible** - Access native provider APIs when needed
-- **Minimal bundle size** - Lazy loading and dynamic imports
+- **Extensible** - Plugin system and native provider API access
+- **Lightweight** - Lazy loading and dynamic imports for minimal bundle size
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ const uploader = new MediaUploader(
   new CloudinaryProvider({
     cloudName: 'your-cloud',
     apiKey: 'your-key',
-    apiSecret: 'your-secret'
+    apiSecret: 'your-secret',
   })
 );
 
@@ -38,8 +38,8 @@ const result = await uploader.upload(file, {
     width: 400,
     height: 400,
     fit: 'cover',
-    format: 'webp'
-  }
+    format: 'webp',
+  },
 });
 
 console.log(result.url);
@@ -47,26 +47,30 @@ console.log(result.url);
 
 ## Packages
 
-| Package                                        | Description                 | Version                                                    |
-| ---------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
-| [@fluxmedia/core](./packages/core)             | Core types and abstractions | ![npm](https://img.shields.io/npm/v/@fluxmedia/core)       |
-| [@fluxmedia/cloudinary](./packages/cloudinary) | Cloudinary provider         | ![npm](https://img.shields.io/npm/v/@fluxmedia/cloudinary) |
-| [@fluxmedia/s3](./packages/s3)                 | AWS S3 provider             | ![npm](https://img.shields.io/npm/v/@fluxmedia/s3)         |
-| [@fluxmedia/r2](./packages/r2)                 | Cloudflare R2 provider      | ![npm](https://img.shields.io/npm/v/@fluxmedia/r2)         |
-| [@fluxmedia/react](./packages/react)           | React hooks and components  | ![npm](https://img.shields.io/npm/v/@fluxmedia/react)      |
+| Package                                        | Description                 | Size  |
+| ---------------------------------------------- | --------------------------- | ----- |
+| [@fluxmedia/core](./packages/core)             | Core types and abstractions | ~13KB |
+| [@fluxmedia/cloudinary](./packages/cloudinary) | Cloudinary provider         | ~14KB |
+| [@fluxmedia/s3](./packages/s3)                 | AWS S3 provider             | ~11KB |
+| [@fluxmedia/r2](./packages/r2)                 | Cloudflare R2 provider      | ~12KB |
+| [@fluxmedia/plugins](./packages/plugins)       | Official plugins            | ~20KB |
+| [@fluxmedia/react](./packages/react)           | React hooks and components  | ~9KB  |
 
 ## Why FluxMedia?
 
-### No Vendor Lock-in
+### Unified API Across Providers
 
-Switch providers by changing **only configuration**, not code:
+Use the same code regardless of which provider you choose:
 
 ```typescript
-// Before: Cloudinary
+// Cloudinary
 const uploader = new MediaUploader(new CloudinaryProvider({ ... }));
 
-// After: S3 (same code works!)
+// S3 (same code works!)
 const uploader = new MediaUploader(new S3Provider({ ... }));
+
+// R2 (same code works!)
+const uploader = new MediaUploader(new R2Provider({ ... }));
 
 // Your upload code stays the same
 await uploader.upload(file);
@@ -82,19 +86,18 @@ const result = await uploader.upload(file);
 // result.width, result.height, result.format, etc.
 ```
 
-### Pay Only for What You Use
+### Lightweight Bundles
 
-Tree-shakeable architecture and lazy loading mean you only bundle what you need:
+Tree-shakeable architecture with lazy loading:
 
-- Core: <5KB gzipped
-- Cloudinary provider: <10KB gzipped (excluding SDK)
-- S3 provider: <15KB gzipped (excluding SDK)
+- **Core**: ~13KB (minified, excludes SDK)
+- **Provider packages**: ~11-14KB each (excludes SDK)
+- **Plugins**: ~20KB (all 5 plugins)
 
 ## Examples
 
-- [Basic Node.js](./examples/basic-node) - Simple upload/delete example
-- [Next.js App](./examples/nextjs-app) - Full Next.js integration with all upload modes
-- [Provider Switching](./examples/provider-switching) - Same code, different providers
+- [Basic Node.js](./examples/basic-node) - All providers, plugins, and core features
+- [Next.js App](./examples/nextjs-app) - Full Next.js integration with all providers
 
 ## React Integration
 
@@ -125,6 +128,20 @@ function UploadButton() {
   );
 }
 ```
+
+## Plugins
+
+```bash
+pnpm add @fluxmedia/plugins
+```
+
+Available plugins:
+
+- **File Validation** - Validate types, sizes, extensions
+- **Image Optimization** - Resize, format, quality (requires sharp)
+- **Metadata Extraction** - EXIF, dimensions, hashing
+- **Analytics** - Logging and tracking with typed events
+- **Retry** - Automatic retry with exponential backoff
 
 ## Provider Feature Comparison
 
@@ -162,4 +179,4 @@ MIT © FluxMedia Contributors
 
 ---
 
-**Built with ❤️ using TypeScript**
+**Built with TypeScript**
