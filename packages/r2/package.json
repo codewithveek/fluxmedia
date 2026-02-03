@@ -13,7 +13,7 @@
     "homepage": "https://fluxmedia.dev",
     "repository": {
         "type": "git",
-        "url": "https://github.com/fluxmediajs/fluxmedia.git",
+        "url": "https://github.com/darkcodewrangler/fluxmedia.git",
         "directory": "packages/r2"
     },
     "license": "MIT",
