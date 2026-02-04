@@ -59,7 +59,7 @@ export function FeatureGrid() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
                     {features.map((feature, i) => (
                         <div
                             key={i}

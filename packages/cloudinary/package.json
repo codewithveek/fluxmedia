@@ -1,68 +1,68 @@
 {
-    "name": "@fluxmedia/cloudinary",
-    "version": "0.1.1",
-    "description": "Cloudinary provider for FluxMedia",
-    "keywords": [
-        "fluxmedia",
-        "cloudinary",
-        "media",
-        "upload",
-        "cloud",
-        "typescript"
-    ],
-    "homepage": "https://fluxmedia.dev",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/codewithveek/fluxmedia.git",
-        "directory": "packages/cloudinary"
-    },
-    "license": "MIT",
-    "author": "FluxMedia Contributors",
-    "sideEffects": false,
-    "type": "module",
-    "exports": {
-        ".": {
-            "import": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.js"
-            },
-            "require": {
-                "types": "./dist/index.d.cts",
-                "default": "./dist/index.cjs"
-            }
-        }
-    },
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist",
-        "README.md",
-        "!dist/**/*.map"
-    ],
-    "scripts": {
-        "build": "tsup",
-        "clean": "rm -rf dist",
-        "dev": "tsup --watch",
-        "test": "vitest",
-        "test:coverage": "vitest --coverage"
-    },
-    "dependencies": {
-        "@fluxmedia/core": "workspace:*"
-    },
-    "devDependencies": {
-        "@types/node": "^22.19.4",
-        "cloudinary": "^2.9.0",
-        "typescript": "^5.3.3",
-        "vitest": "^4.0.18"
-    },
-    "peerDependencies": {
-        "cloudinary": "^2.9.0"
-    },
-    "publishConfig": {
-        "access": "public"
-    },
-    "engines": {
-        "node": ">=20.0.0"
+  "name": "@fluxmedia/cloudinary",
+  "version": "1.0.0",
+  "description": "Cloudinary provider for FluxMedia",
+  "keywords": [
+    "fluxmedia",
+    "cloudinary",
+    "media",
+    "upload",
+    "cloud",
+    "typescript"
+  ],
+  "homepage": "https://fluxmedia.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithveek/fluxmedia.git",
+    "directory": "packages/cloudinary"
+  },
+  "license": "MIT",
+  "author": "FluxMedia Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@fluxmedia/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.4",
+    "cloudinary": "^2.9.0",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "cloudinary": "^2.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

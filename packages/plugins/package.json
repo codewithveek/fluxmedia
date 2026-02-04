@@ -1,72 +1,72 @@
 {
-    "name": "@fluxmedia/plugins",
-    "version": "0.1.1",
-    "description": "Official plugins for FluxMedia - validation, optimization, analytics, and more",
-    "keywords": [
-        "fluxmedia",
-        "plugins",
-        "media",
-        "upload",
-        "validation",
-        "optimization"
-    ],
-    "homepage": "https://fluxmedia.dev",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/codewithveek/fluxmedia.git",
-        "directory": "packages/plugins"
-    },
-    "license": "MIT",
-    "author": "FluxMedia Contributors",
-    "sideEffects": false,
-    "type": "module",
-    "exports": {
-        ".": {
-            "import": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.js"
-            },
-            "require": {
-                "types": "./dist/index.d.cts",
-                "default": "./dist/index.cjs"
-            }
-        }
-    },
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist",
-        "README.md",
-        "!dist/**/*.map"
-    ],
-    "scripts": {
-        "build": "tsup",
-        "clean": "rm -rf dist",
-        "dev": "tsup --watch",
-        "test": "vitest"
-    },
-    "dependencies": {
-        "@fluxmedia/core": "workspace:*"
-    },
-    "devDependencies": {
-        "@types/node": "^22.19.4",
-        "sharp": "^0.33.0",
-        "typescript": "^5.3.3",
-        "vitest": "^4.0.18"
-    },
-    "peerDependencies": {
-        "sharp": "^0.33.0"
-    },
-    "peerDependenciesMeta": {
-        "sharp": {
-            "optional": true
-        }
-    },
-    "publishConfig": {
-        "access": "public"
-    },
-    "engines": {
-        "node": ">=20.0.0"
+  "name": "@fluxmedia/plugins",
+  "version": "1.0.0",
+  "description": "Official plugins for FluxMedia - validation, optimization, analytics, and more",
+  "keywords": [
+    "fluxmedia",
+    "plugins",
+    "media",
+    "upload",
+    "validation",
+    "optimization"
+  ],
+  "homepage": "https://fluxmedia.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithveek/fluxmedia.git",
+    "directory": "packages/plugins"
+  },
+  "license": "MIT",
+  "author": "FluxMedia Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@fluxmedia/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.4",
+    "sharp": "^0.33.0",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "sharp": "^0.33.0"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

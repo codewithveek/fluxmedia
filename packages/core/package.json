@@ -1,73 +1,73 @@
 {
-    "name": "@fluxmedia/core",
-    "version": "0.1.1",
-    "description": "Core types and abstractions for FluxMedia - provider-agnostic media upload library",
-    "keywords": [
-        "fluxmedia",
-        "media",
-        "upload",
-        "cloud",
-        "typescript"
-    ],
-    "homepage": "https://fluxmedia.dev",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/codewithveek/fluxmedia.git",
-        "directory": "packages/core"
+  "name": "@fluxmedia/core",
+  "version": "1.0.0",
+  "description": "Core types and abstractions for FluxMedia - provider-agnostic media upload library",
+  "keywords": [
+    "fluxmedia",
+    "media",
+    "upload",
+    "cloud",
+    "typescript"
+  ],
+  "homepage": "https://fluxmedia.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithveek/fluxmedia.git",
+    "directory": "packages/core"
+  },
+  "license": "MIT",
+  "author": "FluxMedia Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
-    "license": "MIT",
-    "author": "FluxMedia Contributors",
-    "sideEffects": false,
-    "type": "module",
-    "exports": {
-        ".": {
-            "import": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.js"
-            },
-            "require": {
-                "types": "./dist/index.d.cts",
-                "default": "./dist/index.cjs"
-            }
-        },
-        "./testing": {
-            "import": {
-                "types": "./dist/testing.d.ts",
-                "default": "./dist/testing.js"
-            },
-            "require": {
-                "types": "./dist/testing.d.cts",
-                "default": "./dist/testing.cjs"
-            }
-        }
-    },
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist",
-        "README.md",
-        "!dist/**/*.map"
-    ],
-    "scripts": {
-        "build": "tsup",
-        "clean": "rm -rf dist",
-        "dev": "tsup --watch",
-        "test": "vitest",
-        "test:coverage": "vitest --coverage"
-    },
-    "devDependencies": {
-        "typescript": "^5.3.3",
-        "vitest": "^4.0.18"
-    },
-    "publishConfig": {
-        "access": "public"
-    },
-    "engines": {
-        "node": ">=20.0.0"
-    },
-    "dependencies": {
-        "file-type": "^21.3.0",
-        "load-esm": "^1.0.3"
+    "./testing": {
+      "import": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      },
+      "require": {
+        "types": "./dist/testing.d.cts",
+        "default": "./dist/testing.cjs"
+      }
     }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "file-type": "^21.3.0",
+    "load-esm": "^1.0.3"
+  }
 }

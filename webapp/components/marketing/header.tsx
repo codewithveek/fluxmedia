@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Github, Moon, Sun, UploadCloud } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function Header() {
+export function Header({ stats }: { stats?: React.ReactNode }) {
     const { setTheme, theme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
@@ -15,7 +15,7 @@ export function Header() {
     }, []);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
             <div className="container flex h-14 max-w-screen-2xl items-center">
                 <Link href="/" className="mr-8 flex items-center space-x-2">
                     <UploadCloud className="h-6 w-6" />
@@ -42,6 +42,7 @@ export function Header() {
                     </Link>
                 </nav>
                 <div className="flex flex-1 items-center justify-end space-x-2">
+                    {stats}
                     <nav className="flex items-center space-x-1">
                         <Button variant="ghost" size="icon" asChild>
                             <Link href="https://github.com/codewithveek/fluxmedia" target="_blank" rel="noreferrer">

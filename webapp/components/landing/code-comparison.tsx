@@ -2,31 +2,45 @@
 
 import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
-import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const OLD_WAY = `// Traditional approach: Provider-specific code
-import { v2 as cloudinary } from 'cloudinary';
+const OLD_WAY = `// Traditional approach: AWS SDK v3 (Verbose)
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-cloudinary.config({ cloudName: 'xxx', apiKey: 'xxx', apiSecret: 'xxx' });
+const client = new S3Client({
+  region: "us-east-1",
+  credentials: { accessKeyId: "...", secretAccessKey: "..." }
+});
 
-const result = await cloudinary.uploader.upload(file.path, {
-  folder: 'avatars',
-  transformation: [{ width: 400, height: 400, crop: 'fill' }]
-});`;
+// Uploading requires manual stream handling & command setup
+const command = new PutObjectCommand({
+  Bucket: "my-bucket",
+  Key: "uploads/avatar.png",
+  Body: fileStream,
+  ContentType: "image/png"
+});
 
-const FLUX_WAY = `// With FluxMedia: Unified, flexible approach
-import { MediaUploader } from '@fluxmedia/core';
-import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+await client.send(command);`;
+
+const FLUX_WAY = `// With FluxMedia: Unified & Type-Safe
+import { MediaUploader } from "@fluxmedia/core";
+import { S3Provider } from "@fluxmedia/s3";
 
 const uploader = new MediaUploader(
-  new CloudinaryProvider({ cloudName: 'xxx', apiKey: 'xxx', apiSecret: 'xxx' })
+  new S3Provider({
+    region: "us-east-1",
+    bucket: "my-bucket",
+    accessKeyId: "...",
+    secretAccessKey: "..."
+  })
 );
 
-const result = await uploader.upload(file, {
-  folder: 'avatars',
-  transformation: { width: 400, height: 400, fit: 'cover' }
+// Works the same for S3, R2, or Cloudinary!
+await uploader.upload(file, {
+  folder: "uploads",
+  metadata: { type: "avatar" }
 });`;
 
 export function CodeComparison() {
@@ -68,7 +82,7 @@ export function CodeComparison() {
                     <span className="text-xs font-medium text-zinc-500">The "Old" Way</span>
                 </div>
                 <div
-                    className="text-sm font-mono overflow-x-auto [&>pre]:!bg-transparent [&>pre]:p-0"
+                    className="text-sm font-mono overflow-x-auto [&>pre]:bg-transparent! [&>pre]:p-0"
                     dangerouslySetInnerHTML={{ __html: oldHtml || "<div class='text-zinc-500'>Loading...</div>" }}
                 />
             </div>
@@ -83,7 +97,7 @@ export function CodeComparison() {
                     <span className="text-xs font-medium text-indigo-400">FluxMedia Way ✨</span>
                 </div>
                 <div
-                    className="text-sm font-mono overflow-x-auto [&>pre]:!bg-transparent [&>pre]:p-0"
+                    className="text-sm font-mono overflow-x-auto [&>pre]:bg-transparent! [&>pre]:p-0"
                     dangerouslySetInnerHTML={{ __html: fluxHtml || "<div class='text-zinc-500'>Loading...</div>" }}
                 />
                 <Button
