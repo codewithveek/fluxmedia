@@ -12,7 +12,8 @@
   "author": "FluxMedia Contributors",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "webapp/*"
   ],
   "scripts": {
     "build": "pnpm -r --filter {./packages/*} run build",

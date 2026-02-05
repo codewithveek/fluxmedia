@@ -16,6 +16,7 @@ export default defineConfig({
                 "**/*.js",
                 'examples/',
                 'docs/',
+                'webapp/',
             ],
             thresholds: {
                 lines: 80,
