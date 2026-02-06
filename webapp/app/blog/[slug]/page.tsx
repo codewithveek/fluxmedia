@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, Clock } from "lucide-react";
+import { BlogContent } from "@/components/blog/blog-content";
 import "./blog-post.css";
 
 export async function generateStaticParams() {
@@ -72,10 +73,7 @@ export default async function BlogPostPage({ params }: Props) {
                 )}
             </div>
 
-            <div
-                className="blog-content"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
-            />
+            <BlogContent htmlContent={htmlContent} />
 
             <div className="mt-16 pt-8 border-t border-border/50">
                 <Button variant="outline" asChild>
@@ -88,3 +86,4 @@ export default async function BlogPostPage({ params }: Props) {
         </article>
     );
 }
+
