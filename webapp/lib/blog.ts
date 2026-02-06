@@ -1,9 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { remark } from 'remark';
-import html from 'remark-html';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeMermaid from 'rehype-mermaid';
+import rehypeStringify from 'rehype-stringify';
 import { codeToHtml } from 'shiki';
 
 const postsDirectory = path.join(process.cwd(), 'content/blog');
@@ -149,9 +152,12 @@ export async function getPostContent(slug: string): Promise<{ meta: BlogPostMeta
     const post = getPostBySlug(slug);
     if (!post) return null;
 
-    const processedContent = await remark()
+    const processedContent = await unified()
+        .use(remarkParse)
         .use(remarkGfm)
-        .use(html)
+        .use(remarkRehype)
+        .use(rehypeMermaid, { strategy: 'inline-svg' })
+        .use(rehypeStringify)
         .process(post.content);
 
     let htmlContent = processedContent.toString();

@@ -14,12 +14,28 @@ FluxMedia's plugin system lets you extend and customize upload behavior without 
 
 Plugins hook into five key lifecycle points:
 
-```
-beforeUpload → [Upload to Provider] → afterUpload
-                      ↓
-                   onError
-                      
-beforeDelete → [Delete from Provider] → afterDelete
+```mermaid
+flowchart LR
+    subgraph Upload Flow
+        A[beforeUpload] --> B[Upload to Provider]
+        B --> C[afterUpload]
+        B --> D[onError]
+    end
+    
+    subgraph Delete Flow
+        E[beforeDelete] --> F[Delete from Provider]
+        F --> G[afterDelete]
+        F --> H[onError]
+    end
+    
+    style A fill:#6366f1,color:#fff
+    style C fill:#6366f1,color:#fff
+    style E fill:#6366f1,color:#fff
+    style G fill:#6366f1,color:#fff
+    style B fill:#1e293b,color:#fff
+    style F fill:#1e293b,color:#fff
+    style D fill:#ef4444,color:#fff
+    style H fill:#ef4444,color:#fff
 ```
 
 ## Creating Your First Plugin

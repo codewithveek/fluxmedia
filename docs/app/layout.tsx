@@ -3,6 +3,7 @@ import { Head } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import type { ReactNode } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 
 export const metadata = {
     title: {
@@ -42,7 +43,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 >
                     {children}
                 </Layout>
+                <Analytics />
             </body>
         </html>
     )
 }
+
