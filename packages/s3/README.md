@@ -1,6 +1,6 @@
 # @fluxmedia/s3
 
-AWS S3 provider for FluxMedia - simple, reliable file storage with the AWS ecosystem.
+AWS S3 provider for FluxMedia - unified media uploads with simple, reliable S3 storage.
 
 ## Installation
 

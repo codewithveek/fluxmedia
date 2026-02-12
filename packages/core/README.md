@@ -1,6 +1,6 @@
 # @fluxmedia/core
 
-Core library for FluxMedia - a provider-agnostic media upload library for JavaScript and TypeScript.
+Core library for FluxMedia - a unified media upload library for JavaScript and TypeScript.
 
 ## Installation
 

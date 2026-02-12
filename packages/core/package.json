@@ -1,7 +1,7 @@
 {
   "name": "@fluxmedia/core",
-  "version": "1.0.0",
-  "description": "Core types and abstractions for FluxMedia - provider-agnostic media upload library",
+  "version": "1.0.1",
+  "description": "Core types and abstractions for FluxMedia - unified media upload library",
   "keywords": [
     "fluxmedia",
     "media",

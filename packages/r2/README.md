@@ -1,6 +1,6 @@
 # @fluxmedia/r2
 
-Cloudflare R2 provider for FluxMedia - cost-effective storage with zero egress fees.
+Cloudflare R2 provider for FluxMedia - unified media uploads with cost-effective R2 storage.
 
 ## Installation
 

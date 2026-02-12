@@ -54,7 +54,7 @@ export function ProvidersSection() {
                         One API, Multiple Providers
                     </h2>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Write your upload logic once. Switch between providers with a single line change.
+                        Write your upload logic once. Use it with any provider. Same interface, same reliability, consistent behavior across Cloudinary, S3, and R2.
                     </p>
                 </div>
 
@@ -65,7 +65,7 @@ export function ProvidersSection() {
                     transition={{ duration: 0.5 }}
                     className="grid grid-cols-1 md:grid-cols-3 gap-6"
                 >
-                    {providers.map((provider, i) => (
+                    {providers.map((provider) => (
                         <div
                             key={provider.name}
                             className="relative group rounded-2xl border border-border/50 bg-card p-6 hover:border-indigo-500/30 transition-all duration-300 hover:shadow-lg"
@@ -76,7 +76,7 @@ export function ProvidersSection() {
                                 </div>
                             )}
 
-                            <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${provider.color} text-white mb-4`}>
+                            <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br ${provider.color} text-white mb-4`}>
                                 <provider.icon className="h-6 w-6" />
                             </div>
 

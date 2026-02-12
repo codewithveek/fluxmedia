@@ -1,8 +1,8 @@
 # FluxMedia
 
-**Switch providers, not code.**
+**One API for all your media uploads.**
 
-A TypeScript-first media management library that provides a unified API for uploading, managing, and serving media across multiple cloud providers (Cloudinary, AWS S3, Cloudflare R2, and more).
+A unified, TypeScript-first media library for modern applications. Upload to Cloudinary, S3, R2, and more with a single interface.
 
 ## Features
 
@@ -66,13 +66,13 @@ Use the same code regardless of which provider you choose:
 // Cloudinary
 const uploader = new MediaUploader(new CloudinaryProvider({ ... }));
 
-// S3 (same code works!)
+// S3
 const uploader = new MediaUploader(new S3Provider({ ... }));
 
-// R2 (same code works!)
+// R2
 const uploader = new MediaUploader(new R2Provider({ ... }));
 
-// Your upload code stays the same
+// Use the same API everywhere
 await uploader.upload(file);
 ```
 

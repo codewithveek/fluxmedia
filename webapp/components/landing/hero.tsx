@@ -26,15 +26,15 @@ export function Hero() {
             </Link>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl mb-6">
-              Switch providers, <br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
-                not code.
+              One API for all <br className="hidden sm:block" />
+              <span className="bg-linear-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                your media uploads
               </span>
             </h1>
 
             <p className="mt-4 text-lg text-muted-foreground sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
               A unified, TypeScript-first media library for modern applications. Upload to
-              Cloudinary, S3, R2, and more with a single API.
+              Cloudinary, S3, R2, and more with a single interface.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -96,9 +96,9 @@ export function Hero() {
 
       {/* Abstract Background Elements */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-[1200px] h-[800px] opacity-40 dark:opacity-25 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/30 via-purple-500/10 to-transparent blur-[120px]" />
+        <div className="absolute inset-0 bg-linear-to-b from-indigo-500/30 via-purple-500/10 to-transparent blur-[120px]" />
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
     </section>
   );
 }

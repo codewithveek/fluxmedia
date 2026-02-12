@@ -165,6 +165,17 @@ docs(readme): update installation instructions
 - Start a discussion for **questions** or **ideas**
 - Check existing issues before creating new ones
 
+## Philosophy
+
+FluxMedia is designed to make media providers more accessible, not to compete with them. We're building infrastructure that:
+
+- Makes it easier to adopt any provider
+- Enables strategic multi-provider architectures
+- Reduces API fragmentation in the ecosystem
+- Improves TypeScript developer experience
+
+When contributing, please keep this philosophy in mind. We position ourselves as a helpful abstraction layer, not as a replacement for providers.
+
 ## Code of Conduct
 
 Be respectful and inclusive. We're all here to build something great together.

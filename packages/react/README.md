@@ -1,6 +1,6 @@
 # @fluxmedia/react
 
-React hooks and components for FluxMedia.
+React hooks and components for FluxMedia - unified media upload components.
 
 ## Installation
 

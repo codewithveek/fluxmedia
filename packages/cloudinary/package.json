@@ -1,7 +1,7 @@
 {
   "name": "@fluxmedia/cloudinary",
-  "version": "1.0.0",
-  "description": "Cloudinary provider for FluxMedia",
+  "version": "1.0.1",
+  "description": "Cloudinary provider for FluxMedia - unified media upload library",
   "keywords": [
     "fluxmedia",
     "cloudinary",

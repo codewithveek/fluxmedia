@@ -1,5 +1,11 @@
 # @fluxmedia/core
 
+## 1.0.1
+
+### Patch Changes
+
+- Update descriptions, READMEs, and documentation to reflect the new "One API" messaging strategy.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 # @fluxmedia/cloudinary
 
-Cloudinary provider for FluxMedia - full-featured media management with on-the-fly transformations, AI tagging, and more.
+Cloudinary provider for FluxMedia - unified media uploads with full-featured management (transformations, AI tagging, etc).
 
 ## Installation
 

@@ -1,6 +1,6 @@
 # @fluxmedia/plugins
 
-Official plugins for FluxMedia - validation, optimization, analytics, and retry functionality.
+Official plugins for FluxMedia - extend your unified media upload pipeline with validation, optimization, analytics, and retry functionality.
 
 ## Installation
 

@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
 
 // Code snippet for the Unified API card
-const UNIFIED_API_CODE = `// Works the same for ANY provider!
+const UNIFIED_API_CODE = `// Same code for ANY provider!
 const uploader = new MediaUploader(
   new S3Provider({ ... })  // or Cloudinary, R2
 );
@@ -29,7 +29,7 @@ await uploader.upload(file, {
 const features = [
     {
         title: "Unified API",
-        description: "One interface for all providers. Switch from Cloudinary to S3 or R2 without rewriting a single line of upload logic.",
+        description: "One interface for all providers. Use Cloudinary, S3, or R2 with the same clean, type-safe API. Start with one, add more as you need them.",
         icon: Layers,
         className: "md:col-span-2 md:row-span-2",
         highlight: true,
@@ -57,7 +57,7 @@ const features = [
     },
     {
         title: "Multi-Provider",
-        description: "Native support for S3, Cloudflare R2, Cloudinary, and extensible for custom providers.",
+        description: "Native support for S3, Cloudflare R2, Cloudinary, and extensible for custom providers. Use the right provider for each use case.",
         icon: Cloud,
     },
     {
@@ -125,7 +125,7 @@ function UnifiedApiCodeSnippet() {
 
 export function FeatureGrid() {
     return (
-        <section className="py-24 lg:py-32 border-t border-border/40 bg-gradient-to-b from-background to-muted/30">
+        <section className="py-24 lg:py-32 border-t border-border/40 bg-linear-to-b from-background to-muted/30">
             <div className="container mx-auto px-4 max-w-7xl">
                 <div className="max-w-3xl mx-auto text-center mb-16">
                     <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
@@ -148,7 +148,7 @@ export function FeatureGrid() {
                             key={i}
                             variants={itemVariants}
                             className={`group relative overflow-hidden rounded-2xl border bg-card p-6 transition-all duration-300 hover:shadow-xl ${feature.highlight
-                                ? "border-indigo-500/30 bg-gradient-to-br from-indigo-500/5 to-background"
+                                ? "border-indigo-500/30 bg-linear-to-br from-indigo-500/5 to-background"
                                 : "border-border/50 hover:border-indigo-500/30"
                                 } ${feature.className || ""}`}
                         >
