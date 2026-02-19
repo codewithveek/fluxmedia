@@ -1,0 +1,201 @@
+# FluxMedia
+
+> FluxMedia is a provider-agnostic media upload library for JavaScript and TypeScript. Upload images, videos, and files to Cloudinary, AWS S3, or Cloudflare R2 using a single unified API.
+
+FluxMedia is an open-source library — not a storage service. It wraps existing cloud storage providers behind a consistent interface. The project is organized as a monorepo of npm packages under the `@fluxmedia` scope.
+
+Key capabilities:
+- Unified API across all providers: `upload`, `delete`, `get`, `getUrl`, `uploadMultiple`, `deleteMultiple`
+- Plugin system with lifecycle hooks: `beforeUpload`, `afterUpload`, `onError`, `beforeDelete`, `afterDelete`
+- React hooks (`useMediaUpload`) and components (`MediaUpload`) for client-side uploads
+- File type detection using magic bytes
+- Official plugins: file validation, image optimization, metadata extraction, analytics, retry with exponential backoff
+
+## Quick Start
+
+### Installation
+
+```bash
+pnpm add @fluxmedia/core @fluxmedia/cloudinary
+```
+
+### Basic Upload
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+
+const uploader = new MediaUploader(
+  new CloudinaryProvider({
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
+  })
+);
+
+const result = await uploader.upload(fileBuffer, {
+  folder: 'uploads',
+  filename: 'my-file',
+});
+
+console.log(result.url);
+```
+
+### Switch Providers — Same Code
+
+```typescript
+// Switch from Cloudinary to S3 without changing upload logic
+import { S3Provider } from '@fluxmedia/s3';
+
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'us-east-1',
+    bucket: 'my-bucket',
+    accessKeyId: '...',
+    secretAccessKey: '...',
+  })
+);
+
+// Exact same API
+await uploader.upload(file, { folder: 'uploads' });
+```
+
+### With React
+
+```tsx
+import { useMediaUpload } from '@fluxmedia/react';
+
+function UploadButton() {
+  const { upload, uploading, progress, result, error } = useMediaUpload({
+    mode: 'signed',
+    signUrlEndpoint: '/api/upload/sign',
+  });
+
+  return (
+    <input
+      type="file"
+      disabled={uploading}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) upload(file);
+      }}
+    />
+  );
+}
+```
+
+### With Plugins
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { S3Provider } from '@fluxmedia/s3';
+import {
+  createFileValidationPlugin,
+  createAnalyticsPlugin,
+  createRetryPlugin,
+  withRetry,
+} from '@fluxmedia/plugins';
+
+const uploader = new MediaUploader(new S3Provider({ ... }));
+
+await uploader.use(createFileValidationPlugin({
+  maxSize: 10 * 1024 * 1024,
+  allowedTypes: ['image/*'],
+}));
+
+await uploader.use(createAnalyticsPlugin({ logLevel: 'info' }));
+
+await uploader.use(createRetryPlugin({
+  maxRetries: 3,
+  exponentialBackoff: true,
+}));
+
+const result = await withRetry(
+  () => uploader.upload(file),
+  { maxRetries: 3 }
+);
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@fluxmedia/core` | Core types, MediaUploader class, plugin system, file type detection |
+| `@fluxmedia/cloudinary` | Cloudinary provider with image/video transformations |
+| `@fluxmedia/s3` | AWS S3 provider with presigned URL support |
+| `@fluxmedia/r2` | Cloudflare R2 provider (S3-compatible, no egress fees) |
+| `@fluxmedia/react` | React hooks (useMediaUpload) and components (MediaUpload) |
+| `@fluxmedia/plugins` | Official plugins for validation, optimization, metadata, analytics, and retry |
+
+## API Reference
+
+### MediaUploader Methods
+
+- `upload(file, options?)` — Upload a single file
+- `delete(id)` — Delete a file by ID
+- `get(id)` — Get file metadata
+- `getUrl(id, transform?)` — Generate a URL with optional transformations
+- `uploadMultiple(files, options?)` — Upload multiple files with concurrency control
+- `deleteMultiple(ids)` — Delete multiple files
+- `supports(feature)` — Check if provider supports a feature
+- `use(plugin)` — Register a plugin
+
+### Core Types
+
+```typescript
+interface UploadOptions {
+  folder?: string;
+  filename?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  transformation?: TransformationOptions;
+  onProgress?: (percent: number) => void;
+  uniqueFilename?: boolean;
+}
+
+interface UploadResult {
+  id: string;
+  url: string;
+  publicUrl: string;
+  size: number;
+  format: string;
+  width?: number;
+  height?: number;
+  provider: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+}
+
+interface TransformationOptions {
+  width?: number;
+  height?: number;
+  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+  quality?: number;
+  format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'png';
+}
+```
+
+### Error Handling
+
+```typescript
+class MediaError extends Error {
+  code: MediaErrorCode;
+  provider: string;
+  originalError?: unknown;
+}
+
+// Error codes: UPLOAD_FAILED, FILE_TOO_LARGE, INVALID_FILE_TYPE,
+// NETWORK_ERROR, INVALID_CREDENTIALS, UNAUTHORIZED, PROVIDER_ERROR,
+// RATE_LIMITED, QUOTA_EXCEEDED, INVALID_CONFIG, MISSING_CREDENTIALS,
+// FILE_NOT_FOUND, DELETE_FAILED
+```
+
+## Documentation
+
+- Full docs: https://fluxmedia.dev/docs
+- API Reference: https://fluxmedia.dev/docs/api
+- Getting Started: https://fluxmedia.dev/docs/getting-started
+- Plugins: https://fluxmedia.dev/docs/plugins
+- React: https://fluxmedia.dev/docs/react
+- Providers: https://fluxmedia.dev/docs/providers
+- Source: https://github.com/codewithveek/fluxmedia

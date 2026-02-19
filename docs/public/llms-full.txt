@@ -1,0 +1,651 @@
+# FluxMedia Documentation
+
+> FluxMedia is a provider-agnostic media upload library for JavaScript and TypeScript. It provides a unified API for uploading images, videos, and files to any cloud storage provider including Cloudinary, AWS S3, and Cloudflare R2.
+
+FluxMedia is an open-source library — not a storage service. It wraps existing cloud storage providers behind a consistent interface. All providers implement the same `MediaProvider` interface.
+
+- All providers share the same API surface: `upload`, `delete`, `get`, `getUrl`, `uploadMultiple`, `deleteMultiple`
+- Plugins extend behavior via lifecycle hooks: `beforeUpload`, `afterUpload`, `onError`, `beforeDelete`, `afterDelete`
+- React integration via `useMediaUpload` hook and `MediaUpload` component
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@fluxmedia/core` | Core types and MediaUploader class |
+| `@fluxmedia/cloudinary` | Cloudinary provider with transformations |
+| `@fluxmedia/s3` | AWS S3 provider |
+| `@fluxmedia/r2` | Cloudflare R2 provider |
+| `@fluxmedia/react` | React hooks and components |
+| `@fluxmedia/plugins` | Official plugins for validation, optimization, metadata, analytics, and retry |
+
+---
+
+## Getting Started
+
+### Installation
+
+```bash
+# Core (required)
+pnpm add @fluxmedia/core
+
+# Pick a provider
+pnpm add @fluxmedia/cloudinary  # Full featured with transformations
+pnpm add @fluxmedia/s3          # AWS S3
+pnpm add @fluxmedia/r2          # Cloudflare R2
+
+# Optional: React integration
+pnpm add @fluxmedia/react
+
+# Optional: Official plugins
+pnpm add @fluxmedia/plugins
+```
+
+### Basic Usage (Node.js / Server)
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+
+const uploader = new MediaUploader(
+  new CloudinaryProvider({
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
+  })
+);
+
+const result = await uploader.upload(fileBuffer, {
+  folder: 'user-avatars',
+  filename: 'avatar-123',
+});
+
+console.log(result.url);     // https://res.cloudinary.com/...
+console.log(result.id);      // user-avatars/avatar-123
+console.log(result.format);  // jpg
+```
+
+### Basic Usage (React)
+
+```tsx
+import { useMediaUpload } from '@fluxmedia/react';
+
+function UploadButton() {
+  const { upload, uploading, progress, result, error } = useMediaUpload({
+    mode: 'signed',
+    signUrlEndpoint: '/api/upload/sign',
+  });
+
+  return (
+    <input
+      type="file"
+      disabled={uploading}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) upload(file);
+      }}
+    />
+  );
+}
+```
+
+### Using Multiple Providers
+
+```typescript
+// Before: Cloudinary
+const uploader = new MediaUploader(new CloudinaryProvider({ ... }));
+
+// Need S3 instead? Same interface!
+import { S3Provider } from '@fluxmedia/s3';
+const uploader = new MediaUploader(
+  new S3Provider({
+    region: 'us-east-1',
+    bucket: 'my-bucket',
+    accessKeyId: process.env.AWS_ACCESS_KEY!,
+    secretAccessKey: process.env.AWS_SECRET_KEY!,
+  })
+);
+
+// All your upload code stays exactly the same
+await uploader.upload(file, { folder: 'uploads' });
+```
+
+### Feature Detection
+
+```typescript
+if (uploader.supports('transformations.resize')) {
+  const url = uploader.getUrl(id, { width: 200, height: 200 });
+}
+
+if (uploader.supports('capabilities.videoProcessing')) {
+  // Provider supports video processing
+}
+```
+
+---
+
+## API Reference
+
+### MediaUploader
+
+The main class for uploading files.
+
+#### Constructor
+
+```typescript
+new MediaUploader(provider: MediaProvider, plugins?: FluxMediaPlugin[])
+```
+
+#### Methods
+
+**upload(file, options?)**
+
+```typescript
+async upload(file: File | Buffer, options?: UploadOptions): Promise<UploadResult>
+```
+
+**delete(id)**
+
+```typescript
+async delete(id: string): Promise<void>
+```
+
+**get(id)**
+
+```typescript
+async get(id: string): Promise<UploadResult>
+```
+
+**getUrl(id, transform?)**
+
+```typescript
+getUrl(id: string, transform?: TransformationOptions): string
+```
+
+**uploadMultiple(files, options?)**
+
+```typescript
+async uploadMultiple(
+  files: File[] | Buffer[],
+  options?: UploadOptions & {
+    concurrency?: number;
+    onBatchProgress?: (completed: number, total: number) => void;
+  }
+): Promise<UploadResult[]>
+```
+
+**deleteMultiple(ids)**
+
+```typescript
+async deleteMultiple(ids: string[]): Promise<void>
+```
+
+**supports(feature)**
+
+```typescript
+supports(feature: string): boolean
+```
+
+**use(plugin)**
+
+```typescript
+async use(plugin: FluxMediaPlugin): Promise<this>
+```
+
+### Types
+
+#### UploadOptions
+
+```typescript
+interface UploadOptions {
+  folder?: string;
+  filename?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  transformation?: TransformationOptions;
+  onProgress?: (percent: number) => void;
+  uniqueFilename?: boolean;  // Generate unique names (default: true)
+}
+```
+
+#### UploadResult
+
+```typescript
+interface UploadResult {
+  id: string;
+  url: string;
+  publicUrl: string;
+  size: number;
+  format: string;
+  width?: number;
+  height?: number;
+  provider: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+}
+```
+
+#### TransformationOptions
+
+```typescript
+interface TransformationOptions {
+  width?: number;
+  height?: number;
+  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+  quality?: number;
+  format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'png';
+}
+```
+
+#### MediaProvider
+
+```typescript
+interface MediaProvider {
+  readonly name: string;
+  readonly features: ProviderFeatures;
+  readonly native: unknown;
+
+  upload(file: File | Buffer, options?: UploadOptions): Promise<UploadResult>;
+  delete(id: string): Promise<void>;
+  get(id: string): Promise<UploadResult>;
+  getUrl(id: string, transform?: TransformationOptions): string;
+  uploadMultiple(files: File[] | Buffer[], options?: UploadOptions): Promise<UploadResult[]>;
+  deleteMultiple(ids: string[]): Promise<void>;
+  search?(query: SearchOptions): Promise<UploadResult[]>;
+}
+```
+
+#### ProviderFeatures
+
+```typescript
+interface ProviderFeatures {
+  transformations: {
+    resize: boolean;
+    crop: boolean;
+    format: boolean;
+    quality: boolean;
+    blur: boolean;
+    rotate: boolean;
+    effects: boolean;
+  };
+  capabilities: {
+    signedUploads: boolean;
+    directUpload: boolean;
+    multipartUpload: boolean;
+    videoProcessing: boolean;
+    aiTagging: boolean;
+    facialDetection: boolean;
+  };
+  storage: {
+    maxFileSize: number;
+    supportedFormats: string[];
+  };
+}
+```
+
+### File Type Detection
+
+Detect file types using magic bytes (more reliable than extensions):
+
+```typescript
+import { getFileType, getFileTypeFromStream, isImage, isVideo } from '@fluxmedia/core';
+
+const type = await getFileType(buffer);
+// { mime: 'image/jpeg', ext: 'jpg' }
+
+const streamType = await getFileTypeFromStream(readableStream);
+
+if (await isImage(buffer)) { /* Handle image */ }
+if (await isVideo(buffer)) { /* Handle video */ }
+```
+
+### Errors
+
+```typescript
+class MediaError extends Error {
+  code: MediaErrorCode;
+  provider: string;
+  originalError?: unknown;
+  details?: Record<string, unknown>;
+}
+
+enum MediaErrorCode {
+  UPLOAD_FAILED = 'UPLOAD_FAILED',
+  FILE_TOO_LARGE = 'FILE_TOO_LARGE',
+  INVALID_FILE_TYPE = 'INVALID_FILE_TYPE',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  PROVIDER_ERROR = 'PROVIDER_ERROR',
+  RATE_LIMITED = 'RATE_LIMITED',
+  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
+  INVALID_CONFIG = 'INVALID_CONFIG',
+  MISSING_CREDENTIALS = 'MISSING_CREDENTIALS',
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
+  DELETE_FAILED = 'DELETE_FAILED',
+}
+```
+
+### Plugin Types
+
+```typescript
+interface FluxMediaPlugin {
+  name: string;
+  version?: string;
+  hooks: PluginHooks;
+  init?: () => Promise<void> | void;
+  destroy?: () => Promise<void> | void;
+}
+
+interface PluginHooks {
+  beforeUpload?: (file, options) => Promise<{ file, options } | void>;
+  afterUpload?: (result) => Promise<UploadResult>;
+  onError?: (error, context) => Promise<void>;
+  beforeDelete?: (id) => Promise<string | void>;
+  afterDelete?: (id) => Promise<void>;
+  beforeGetUrl?: (id, transform?) => Promise<{ id, transform? } | void>;
+}
+```
+
+### Analytics Event Types
+
+```typescript
+type AnalyticsEventType =
+  | 'media.upload.started'
+  | 'media.upload.completed'
+  | 'media.delete.completed'
+  | 'media.error';
+
+type TrackFunction = <T extends AnalyticsEventType>(
+  event: T,
+  data: AnalyticsEventMap[T]
+) => void;
+```
+
+---
+
+## Plugins
+
+### Installation
+
+```bash
+pnpm add @fluxmedia/plugins
+
+# For image optimization:
+pnpm add sharp
+```
+
+### File Validation Plugin
+
+Validates files before upload:
+
+```typescript
+import { createFileValidationPlugin } from '@fluxmedia/plugins';
+
+const plugin = createFileValidationPlugin({
+  allowedTypes: ['image/*', 'video/mp4'],
+  maxSize: 10 * 1024 * 1024, // 10MB
+  blockedExtensions: ['.exe', '.bat'],
+  useMagicBytes: true,
+});
+```
+
+### Image Optimization Plugin (Server-side)
+
+Optimizes images using sharp before upload:
+
+```typescript
+import { createImageOptimizationPlugin } from '@fluxmedia/plugins';
+
+const plugin = createImageOptimizationPlugin({
+  maxWidth: 2000,
+  maxHeight: 2000,
+  quality: 0.85,
+  format: 'webp',
+});
+```
+
+### Metadata Extraction Plugin
+
+Extracts EXIF data, dimensions, and file hashes:
+
+```typescript
+import { createMetadataExtractionPlugin } from '@fluxmedia/plugins';
+
+const plugin = createMetadataExtractionPlugin({
+  extractExif: true,
+  extractDimensions: true,
+  hashFile: true,
+});
+```
+
+### Analytics Plugin
+
+Logs and tracks upload operations with strongly-typed events:
+
+```typescript
+import { createAnalyticsPlugin } from '@fluxmedia/plugins';
+
+const plugin = createAnalyticsPlugin({
+  environment: 'production',
+  logLevel: 'info',
+  track: (event, data) => {
+    myAnalytics.track(event, data);
+  },
+});
+```
+
+### Retry Plugin
+
+Automatic retry with exponential backoff:
+
+```typescript
+import { createRetryPlugin, withRetry } from '@fluxmedia/plugins';
+
+await uploader.use(createRetryPlugin({
+  maxRetries: 3,
+  retryDelay: 1000,
+  exponentialBackoff: true,
+  onRetry: (attempt, error, delay) => {
+    console.log(`Retry ${attempt} after ${delay}ms`);
+  }
+}));
+
+const result = await withRetry(
+  () => uploader.upload(file),
+  { maxRetries: 3, exponentialBackoff: true }
+);
+```
+
+### Creating Custom Plugins
+
+```typescript
+import { createPlugin } from '@fluxmedia/core';
+
+const myPlugin = createPlugin('my-plugin', {
+  beforeUpload: async (file, options) => {
+    console.log('Uploading:', file);
+    return { file, options };
+  },
+  afterUpload: async (result) => {
+    console.log('Uploaded:', result.url);
+    return result;
+  },
+  onError: async (error, context) => {
+    console.error('Failed:', error.message);
+  },
+});
+```
+
+### Plugin Manager API
+
+```typescript
+uploader.plugins.has('logger');
+const plugin = uploader.plugins.get('logger');
+await uploader.plugins.unregister('logger');
+const allPlugins = uploader.plugins.getAll();
+await uploader.plugins.clear();
+```
+
+Plugins execute in registration order. When registering plugins with the same name, the last one wins.
+
+---
+
+## React Integration
+
+### useMediaUpload Hook
+
+```tsx
+import { useMediaUpload } from '@fluxmedia/react';
+
+function UploadForm() {
+  const { upload, uploading, progress, result, error, reset } = useMediaUpload({
+    mode: 'signed',
+    signUrlEndpoint: '/api/upload/sign',
+    onUploadComplete: (result) => console.log('Done:', result.url),
+    onUploadError: (error) => console.error('Failed:', error),
+  });
+
+  return (
+    <div>
+      <input
+        type="file"
+        accept="image/*"
+        disabled={uploading}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) upload(file, { folder: 'uploads' });
+        }}
+      />
+      {uploading && <progress value={progress} max={100} />}
+      {result && <img src={result.url} alt="Uploaded" />}
+      {error && <p>Error: {error.message}</p>}
+      <button onClick={reset}>Reset</button>
+    </div>
+  );
+}
+```
+
+#### Hook Options
+
+```typescript
+interface UseMediaUploadConfig {
+  mode: 'direct' | 'signed' | 'proxy';
+  signUrlEndpoint?: string;
+  proxyEndpoint?: string;
+  defaultOptions?: { folder?: string; tags?: string[] };
+  onUploadStart?: () => void;
+  onUploadComplete?: (result: UploadResult) => void;
+  onUploadError?: (error: Error) => void;
+}
+```
+
+#### Hook Return Values
+
+```typescript
+interface UseMediaUploadReturn {
+  upload: (file: File, options?: UploadOptions) => Promise<UploadResult>;
+  uploading: boolean;
+  progress: number; // 0-100
+  result: UploadResult | null;
+  error: Error | null;
+  reset: () => void;
+  preview: string | null;
+  setPreview: (file: File | null) => void;
+  fileType: { mime: string; ext: string } | null;
+  detectFileType: (file: File) => Promise<{ mime: string; ext: string } | null>;
+}
+```
+
+### Upload Modes
+
+**Signed Upload (Recommended):** Browser gets a signed URL from your server, then uploads directly to the provider.
+
+```tsx
+const { upload } = useMediaUpload({
+  mode: 'signed',
+  signUrlEndpoint: '/api/upload/sign',
+});
+```
+
+**Proxy Upload:** Upload goes through your server (more control, slightly slower).
+
+```tsx
+const { upload } = useMediaUpload({
+  mode: 'proxy',
+  proxyEndpoint: '/api/upload',
+});
+```
+
+### MediaUpload Component
+
+Render-prop component for complex UIs:
+
+```tsx
+import { MediaUpload } from '@fluxmedia/react';
+
+<MediaUpload
+  config={{ mode: 'signed', signUrlEndpoint: '/api/upload/sign' }}
+  accept="image/*"
+  maxSize={5 * 1024 * 1024}
+  onComplete={(results) => console.log('Uploaded:', results)}
+  onError={(error) => console.error(error)}
+>
+  {({ uploading, progress, result, openFileDialog }) => (
+    <div>
+      <button onClick={openFileDialog} disabled={uploading}>
+        {uploading ? `Uploading ${progress}%` : 'Select File'}
+      </button>
+      {result && <img src={result.url} alt="Uploaded" />}
+    </div>
+  )}
+</MediaUpload>
+```
+
+---
+
+## Providers
+
+### Cloudinary
+
+```typescript
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
+
+const provider = new CloudinaryProvider({
+  cloudName: 'your-cloud-name',
+  apiKey: 'your-api-key',
+  apiSecret: 'your-api-secret',
+});
+```
+
+Cloudinary supports all transformations (resize, crop, format, quality, blur, rotate, effects), video processing, AI tagging, and facial detection.
+
+### AWS S3
+
+```typescript
+import { S3Provider } from '@fluxmedia/s3';
+
+const provider = new S3Provider({
+  region: 'us-east-1',
+  bucket: 'my-bucket',
+  accessKeyId: 'your-access-key',
+  secretAccessKey: 'your-secret-key',
+});
+```
+
+S3 supports direct upload, multipart upload, and presigned URLs. No image transformations.
+
+### Cloudflare R2
+
+```typescript
+import { R2Provider } from '@fluxmedia/r2';
+
+const provider = new R2Provider({
+  accountId: 'your-account-id',
+  bucket: 'my-bucket',
+  accessKeyId: 'your-access-key',
+  secretAccessKey: 'your-secret-key',
+});
+```
+
+R2 is S3-compatible with no egress fees. Supports direct upload but no image transformations.
