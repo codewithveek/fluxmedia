@@ -11,6 +11,13 @@ export const metadata = {
         template: '%s – FluxMedia'
     },
     description: 'FluxMedia - Provider-agnostic media uploads for JavaScript',
+    metadataBase: new URL(
+        process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.fluxmedia.dev'
+    ),
+    robots: {
+        index: true,
+        follow: true
+    },
     openGraph: {
         title: 'FluxMedia Documentation',
         description: 'Provider-agnostic media uploads for JavaScript'

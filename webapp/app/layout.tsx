@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   title: "FluxMedia - Provider-Agnostic Media Uploads for TypeScript",
   description:
     "Upload to any cloud provider with one unified API. FluxMedia works with Cloudinary, S3, R2, and more. TypeScript-first. Open source.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://fluxmedia.dev"
+  ),
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -51,4 +58,3 @@ export default function RootLayout({
     </html>
   );
 }
-
