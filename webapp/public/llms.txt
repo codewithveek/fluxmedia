@@ -13,18 +13,18 @@ Key capabilities:
 
 ## Documentation
 
-- [Getting Started](https://fluxmedia.dev/docs/getting-started): Installation guide, basic usage, and quick start
-- [API Reference](https://fluxmedia.dev/docs/api): Complete API documentation for all packages
-- [Plugins Guide](https://fluxmedia.dev/docs/plugins): Official plugins and custom plugin development
-- [React Integration](https://fluxmedia.dev/docs/react): Hooks, components, and upload modes
-- [Providers](https://fluxmedia.dev/docs/providers): Cloudinary, S3, and R2 configuration
+- [Getting Started](https://www.fluxmedia.dev/docs/getting-started): Installation guide, basic usage, and quick start
+- [API Reference](https://www.fluxmedia.dev/docs/api): Complete API documentation for all packages
+- [Plugins Guide](https://www.fluxmedia.dev/docs/plugins): Official plugins and custom plugin development
+- [React Integration](https://www.fluxmedia.dev/docs/react): Hooks, components, and upload modes
+- [Providers](https://www.fluxmedia.dev/docs/providers): Cloudinary, S3, and R2 configuration
 
 ## Blog
 
-- [Getting Started with FluxMedia](https://fluxmedia.dev/blog/getting-started-with-fluxmedia): Step-by-step tutorial for first-time users
-- [Understanding the Plugin System](https://fluxmedia.dev/blog/understanding-the-plugin-system): Deep dive into plugin lifecycle, hooks, and official plugins
-- [Using Multiple Providers](https://fluxmedia.dev/blog/using-multiple-providers-zero-effort): Guide to switching and using multiple providers simultaneously
-- [Why FluxMedia is Not a Competitor](https://fluxmedia.dev/blog/why-fluxmedia-is-not-a-competitor): FluxMedia's relationship to cloud providers explained
+- [Getting Started with FluxMedia](https://www.fluxmedia.dev/blog/getting-started-with-fluxmedia): Step-by-step tutorial for first-time users
+- [Understanding the Plugin System](https://www.fluxmedia.dev/blog/understanding-the-plugin-system): Deep dive into plugin lifecycle, hooks, and official plugins
+- [Using Multiple Providers](https://www.fluxmedia.dev/blog/using-multiple-providers-zero-effort): Guide to switching and using multiple providers simultaneously
+- [Why FluxMedia is Not a Competitor](https://www.fluxmedia.dev/blog/why-fluxmedia-is-not-a-competitor): FluxMedia's relationship to cloud providers explained
 
 ## Packages
 
@@ -38,4 +38,4 @@ Key capabilities:
 ## Optional
 
 - [Source Code](https://github.com/codewithveek/fluxmedia): GitHub repository with full source, examples, and issue tracker
-- [Changelog](https://fluxmedia.dev/changelog): Version history and release notes
+- [Changelog](https://www.fluxmedia.dev/changelog): Version history and release notes

@@ -10,16 +10,16 @@ FluxMedia is available as a set of npm packages under the `@fluxmedia` scope. Th
 
 ## Docs
 
-- [Getting Started](https://fluxmedia.dev/docs/getting-started): Installation, basic usage, React integration, and multi-provider setup
-- [API Reference](https://fluxmedia.dev/docs/api): Complete API documentation for MediaUploader, types, errors, plugin types, and analytics events
-- [Plugins](https://fluxmedia.dev/docs/plugins): Official plugins (file validation, image optimization, metadata extraction, analytics, retry) and custom plugin creation
-- [React Integration](https://fluxmedia.dev/docs/react): useMediaUpload hook, MediaUpload component, upload modes (signed, proxy, direct), preview, and file type detection
+- [Getting Started](https://www.fluxmedia.dev/docs/getting-started): Installation, basic usage, React integration, and multi-provider setup
+- [API Reference](https://www.fluxmedia.dev/docs/api): Complete API documentation for MediaUploader, types, errors, plugin types, and analytics events
+- [Plugins](https://www.fluxmedia.dev/docs/plugins): Official plugins (file validation, image optimization, metadata extraction, analytics, retry) and custom plugin creation
+- [React Integration](https://www.fluxmedia.dev/docs/react): useMediaUpload hook, MediaUpload component, upload modes (signed, proxy, direct), preview, and file type detection
 
 ## Providers
 
-- [Cloudinary Provider](https://fluxmedia.dev/docs/providers/cloudinary): Configuration, transformations, signed uploads, and Cloudinary-specific features
-- [AWS S3 Provider](https://fluxmedia.dev/docs/providers/s3): Configuration, presigned URLs, multipart uploads, and S3-specific options
-- [Cloudflare R2 Provider](https://fluxmedia.dev/docs/providers/r2): Configuration, custom domains, and R2-specific options
+- [Cloudinary Provider](https://www.fluxmedia.dev/docs/providers/cloudinary): Configuration, transformations, signed uploads, and Cloudinary-specific features
+- [AWS S3 Provider](https://www.fluxmedia.dev/docs/providers/s3): Configuration, presigned URLs, multipart uploads, and S3-specific options
+- [Cloudflare R2 Provider](https://www.fluxmedia.dev/docs/providers/r2): Configuration, custom domains, and R2-specific options
 
 ## Packages
 

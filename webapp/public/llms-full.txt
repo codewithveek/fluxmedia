@@ -192,10 +192,10 @@ class MediaError extends Error {
 
 ## Documentation
 
-- Full docs: https://fluxmedia.dev/docs
-- API Reference: https://fluxmedia.dev/docs/api
-- Getting Started: https://fluxmedia.dev/docs/getting-started
-- Plugins: https://fluxmedia.dev/docs/plugins
-- React: https://fluxmedia.dev/docs/react
-- Providers: https://fluxmedia.dev/docs/providers
+- Full docs: https://www.fluxmedia.dev/docs
+- API Reference: https://www.fluxmedia.dev/docs/api
+- Getting Started: https://www.fluxmedia.dev/docs/getting-started
+- Plugins: https://www.fluxmedia.dev/docs/plugins
+- React: https://www.fluxmedia.dev/docs/react
+- Providers: https://www.fluxmedia.dev/docs/providers
 - Source: https://github.com/codewithveek/fluxmedia
