@@ -53,6 +53,7 @@ jobs:
           pnpm --filter @fluxmedia/s3 build
           pnpm --filter @fluxmedia/r2 build
           pnpm --filter @fluxmedia/react build
+          pnpm --filter @fluxmedia/plugins build
 
   test:
     name: Test
@@ -111,6 +112,7 @@ jobs:
           pnpm --filter @fluxmedia/s3 build
           pnpm --filter @fluxmedia/r2 build
           pnpm --filter @fluxmedia/react build
+          pnpm --filter @fluxmedia/plugins build
 
       - name: Create Release Pull Request or Publish
         uses: changesets/action@v1
