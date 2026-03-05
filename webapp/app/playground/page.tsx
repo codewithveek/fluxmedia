@@ -100,7 +100,7 @@ export default function PlaygroundPage() {
   const [error, setError] = useState(false);
 
   // Use StackBlitz's WebContainer URL with custom code
-  const stackblitzUrl = `https://stackblitz.com/edit/node-fluxmedia-demo?embed=1&file=index.js&hideNavigation=1&theme=dark&view=editor`;
+  const stackblitzUrl = `https://stackblitz.com/github/codewithveek/fluxmedia/tree/main/examples/basic-node?embed=1&file=index.js&hideNavigation=1&theme=dark&view=editor`;
 
   const handleRetry = () => {
     setLoading(true);
@@ -113,7 +113,7 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <div className="container py-8 h-[calc(100vh-4rem)] flex flex-col max-w-7xl">
+    <div className="px-4 lg:px-8 container py-8 flex flex-col max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Playground</h1>
@@ -128,7 +128,7 @@ export default function PlaygroundPage() {
           </Button>
           <Button variant="outline" size="sm" asChild className="gap-2">
             <a
-              href="https://stackblitz.com/edit/node-fluxmedia-demo"
+              href="https://stackblitz.com/github/codewithveek/fluxmedia/tree/main/examples/basic-node"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -145,7 +145,7 @@ export default function PlaygroundPage() {
         API. Edit the code directly in StackBlitz to experiment!
       </div>
 
-      <div className="flex-1 rounded-xl border border-border/50 bg-surface overflow-hidden relative">
+      <div className=" min-h-120 bg-surface flex-1 rounded-xl border border-border/50 py-5  overflow-hidden relative">
         {loading && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface text-muted-foreground z-20">
             <Loader2 className="h-10 w-10 animate-spin mb-4" />
@@ -165,7 +165,7 @@ export default function PlaygroundPage() {
 
         <iframe
           src={stackblitzUrl}
-          className="w-full h-full border-0 relative z-10"
+          className="w-full h-120 border-0 relative z-10"
           title="FluxMedia Playground"
           onLoad={() => setLoading(false)}
           onError={() => {
