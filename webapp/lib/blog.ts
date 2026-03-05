@@ -54,6 +54,23 @@ export function getAllPosts(): BlogPostMeta[] {
   return posts.map(({ content, ...meta }) => meta);
 }
 
+/**
+ * Get prev/next blog posts for a given slug, based on date order (newest first).
+ * "Previous" = newer post, "Next" = older post (reading order).
+ */
+export function getBlogPrevNext(slug: string): {
+  prev: { slug: string; title: string } | null;
+  next: { slug: string; title: string } | null;
+} {
+  const posts = getAllPosts();
+  const idx = posts.findIndex((p) => p.slug === slug);
+  if (idx === -1) return { prev: null, next: null };
+  return {
+    prev: idx > 0 ? { slug: posts[idx - 1].slug, title: posts[idx - 1].title } : null,
+    next: idx < posts.length - 1 ? { slug: posts[idx + 1].slug, title: posts[idx + 1].title } : null,
+  };
+}
+
 export function getPostBySlug(slug: string): BlogPost | null {
   try {
     const fullPath = path.join(postsDirectory, `${slug}.md`);

@@ -35,6 +35,35 @@ export const docsNavigation: DocNavItem[] = [
   { slug: 'api', title: 'API Reference' },
 ];
 
+/** Flatten docsNavigation into an ordered list of leaf pages (sidebar order). */
+function flattenNav(items: DocNavItem[]): { slug: string; title: string }[] {
+  const result: { slug: string; title: string }[] = [];
+  for (const item of items) {
+    if (item.children && item.children.length > 0) {
+      result.push(...flattenNav(item.children));
+    } else {
+      result.push({ slug: item.slug, title: item.title });
+    }
+  }
+  return result;
+}
+
+/**
+ * Get prev/next doc pages for a given slug, based on sidebar order.
+ */
+export function getDocPrevNext(slug: string): {
+  prev: { slug: string; title: string } | null;
+  next: { slug: string; title: string } | null;
+} {
+  const flat = flattenNav(docsNavigation);
+  const idx = flat.findIndex((item) => item.slug === slug);
+  if (idx === -1) return { prev: null, next: null };
+  return {
+    prev: idx > 0 ? flat[idx - 1] : null,
+    next: idx < flat.length - 1 ? flat[idx + 1] : null,
+  };
+}
+
 export function getAllDocSlugs(): string[] {
   if (!fs.existsSync(docsDirectory)) {
     return [];

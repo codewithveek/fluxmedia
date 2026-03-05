@@ -1,9 +1,10 @@
-import { getAllPostSlugs, getPostContent } from '@/lib/blog';
+import { getAllPostSlugs, getPostContent, getBlogPrevNext } from '@/lib/blog';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { BlogContent } from '@/components/blog/blog-content';
+import { PrevNextNav } from '@/components/prev-next-nav';
 import './blog-post.css';
 
 export async function generateStaticParams() {
@@ -24,6 +25,7 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   const { meta, htmlContent } = post;
+  const { prev, next } = getBlogPrevNext(slug);
 
   return (
     <article className="container py-12 md:py-16 max-w-3xl px-4 md:px-8">
@@ -80,14 +82,10 @@ export default async function BlogPostPage({ params }: Props) {
 
       <BlogContent htmlContent={htmlContent} />
 
-      <div className="mt-16 pt-8 border-t border-border/50">
-        <Button variant="outline" asChild>
-          <Link href="/blog">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            All Posts
-          </Link>
-        </Button>
-      </div>
+      <PrevNextNav
+        prev={prev ? { href: `/blog/${prev.slug}`, title: prev.title } : null}
+        next={next ? { href: `/blog/${next.slug}`, title: next.title } : null}
+      />
     </article>
   );
 }

@@ -1,6 +1,7 @@
-import { getDocBySlug, getAllDocSlugs } from '@/lib/docs';
+import { getDocBySlug, getAllDocSlugs, getDocPrevNext } from '@/lib/docs';
 import { notFound } from 'next/navigation';
 import { DocsContent } from '@/components/docs/docs-content';
+import { PrevNextNav } from '@/components/prev-next-nav';
 
 export async function generateStaticParams() {
   const slugs = getAllDocSlugs();
@@ -36,5 +37,15 @@ export default async function DocsPage({ params }: Props) {
     notFound();
   }
 
-  return <DocsContent title={doc.title} content={doc.content} />;
+  const { prev, next } = getDocPrevNext(docSlug);
+
+  return (
+    <>
+      <DocsContent title={doc.title} content={doc.content} />
+      <PrevNextNav
+        prev={prev ? { href: prev.slug === '' ? '/docs' : `/docs/${prev.slug}`, title: prev.title } : null}
+        next={next ? { href: next.slug === '' ? '/docs' : `/docs/${next.slug}`, title: next.title } : null}
+      />
+    </>
+  );
 }
