@@ -1,5 +1,9 @@
 # FluxMedia
 
+<p align="left">
+  <img src="./webapp/public/fluxmedia-logo.svg" alt="FluxMedia logo" width="260" />
+</p>
+
 **One API for all your media uploads.**
 
 A unified, TypeScript-first media library for modern applications. Upload to Cloudinary, S3, R2, and more with a single interface.

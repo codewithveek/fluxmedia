@@ -28,8 +28,8 @@ export function Hero() {
             </h1>
 
             <p className="mt-4 text-lg text-muted-foreground sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              Provider-agnostic media uploads for TypeScript. Upload to Cloudinary, S3, R2, and more
-              with a single, unified interface. No lock-in. No rewrites.
+              Simplify media uploads in TypeScript. A unified, type-safe interface for Cloudinary,
+              S3, R2, and more — so you can focus on building features, not wrangling SDKs.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -15,9 +15,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FluxMedia - Provider-Agnostic Media Uploads for TypeScript',
+  title: 'FluxMedia - Unified Media Uploads for TypeScript',
   description:
-    'Upload to any cloud provider with one unified API. FluxMedia works with Cloudinary, S3, R2, and more. TypeScript-first. Open source.',
+    'Simplify media uploads with one unified API. FluxMedia works with Cloudinary, S3, R2, and more. TypeScript-first. Open source.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.fluxmedia.dev'),
   alternates: {
     canonical: '/',

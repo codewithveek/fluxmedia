@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props) {
 
   return {
     title: doc ? `${doc.title} - FluxMedia Docs` : 'FluxMedia Documentation',
-    description: `FluxMedia documentation - ${doc?.title || 'Provider-agnostic media uploads for TypeScript'}`,
+    description: `FluxMedia documentation - ${doc?.title || 'Unified media uploads for TypeScript'}`,
   };
 }
 

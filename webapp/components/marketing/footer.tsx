@@ -1,19 +1,17 @@
 import Link from 'next/link';
-import { UploadCloud } from 'lucide-react';
+import { FluxMediaLogo } from '@/components/brand/fluxmedia-logo';
 
 export function Footer() {
   return (
     <footer className="border-t border-border/60 bg-surface pt-16 pb-10 px-4 md:px-6">
-      <div className="container max-w-screen-xl mx-auto">
+      <div className="container max-w-7xl mx-auto">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
           <div className="col-span-2 md:col-span-1 space-y-4">
             <div className="flex items-center space-x-2.5">
-              <UploadCloud className="h-5 w-5 text-brand" />
-              <span className="font-bold tracking-tight">FluxMedia</span>
+              <FluxMediaLogo />
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px]">
-              Switch providers, not code. The TypeScript-first media library for modern
-              applications.
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-60">
+              Simplify every upload. The TypeScript-first media library for modern applications.
             </p>
           </div>
           <div>

@@ -1,13 +1,13 @@
 # FluxMedia
 
-**Provider-agnostic media uploads for JavaScript**
+**Unified media uploads for JavaScript**
 
-FluxMedia is a unified API for uploading images, videos, and files to any cloud storage provider. Write your upload logic once, use it with any provider.
+FluxMedia is a unified API for uploading images, videos, and files to any cloud storage provider. Write your upload logic once, and it works with every provider.
 
 ## Features
 
-- **Provider Agnostic** - Use Cloudinary, S3, R2, and more with one interface
-- **Unified API** - Same code works with any provider
+- **Unified API** - Use Cloudinary, S3, R2, and more with one interface
+- **Consistent Interface** - Same code works with any provider
 - **Streaming Support** - Upload from File, Buffer, Readable, or ReadableStream
 - **Fallback Providers** - Automatic failover when primary provider fails
 - **Transactional Uploads** - Atomic upload-then-commit with rollback support
@@ -60,17 +60,19 @@ console.log(result.storageKey); // Provider-specific storage key
 ### Before FluxMedia
 
 ```typescript
-// Tightly coupled to Cloudinary
+// Cloudinary SDK
 import cloudinary from 'cloudinary';
 cloudinary.v2.uploader.upload(file, { folder: 'uploads' });
 
-// Migrating to S3? Rewrite everything...
+// S3 SDK — completely different API
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+// ... lots of boilerplate
 ```
 
 ### With FluxMedia
 
 ```typescript
-// Provider-agnostic
+// Unified interface
 import { MediaUploader } from '@fluxmedia/core';
 import { CloudinaryProvider } from '@fluxmedia/cloudinary';
 // OR

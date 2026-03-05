@@ -1,6 +1,6 @@
 # FluxMedia Documentation
 
-> FluxMedia is a provider-agnostic media upload library for JavaScript and TypeScript. It provides a unified API for uploading images, videos, and files to any cloud storage provider including Cloudinary, AWS S3, and Cloudflare R2. Write your upload logic once, switch providers without changing code.
+> FluxMedia is a unified media upload library for JavaScript and TypeScript. It provides a unified API for uploading images, videos, and files to any cloud storage provider including Cloudinary, AWS S3, and Cloudflare R2. Write your upload logic once, and it works with every provider.
 
 FluxMedia is available as a set of npm packages under the `@fluxmedia` scope. The core package provides the `MediaUploader` class, plugin system, and structured error handling, while provider packages implement the `MediaProvider` interface for specific services. A React integration package provides hooks and components for client-side uploads.
 

@@ -106,15 +106,15 @@ function UploadButton() {
 
 ## Using Multiple Providers
 
-The main benefit of FluxMedia is using a consistent API across different providers:
+FluxMedia lets you use multiple providers in the same application with a consistent API:
 
 ```typescript
-// Before: Cloudinary
+// Cloudinary for media
 const uploader = new MediaUploader(
   new CloudinaryProvider({ ... })
 );
 
-// Need S3 instead? Same interface!
+// S3 for archives — same interface
 import { S3Provider } from '@fluxmedia/s3';
 
 const uploader = new MediaUploader(

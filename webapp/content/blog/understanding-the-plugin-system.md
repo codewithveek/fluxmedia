@@ -153,22 +153,46 @@ Plugins execute in registration order:
 
 If any hook throws, `onError` hooks are called and upload stops.
 
+## Graceful Degradation
+
+Plugins are designed to degrade gracefully. If a non-critical plugin fails during `afterUpload`, the upload itself has already succeeded. You can catch and log plugin errors without losing the upload result. This lets you add optional enhancements like analytics or logging without risking data loss.
+
 ## Official Plugins
 
-The `@fluxmedia/plugins` package includes battle-tested plugins:
+The `@fluxmedia/plugins` package includes battle-tested plugins ready for production:
 
 ```bash
 pnpm add @fluxmedia/plugins
 ```
 
-- **File Validation** - Type, size, and extension validation
-- **Image Optimization** - Resize and compress before upload
-- **Metadata Extraction** - Extract EXIF, dimensions, file hash
-- **Analytics** - Configurable logging and tracking
-- **Retry** - Automatic retry with exponential backoff
+```typescript
+import {
+  fileValidationPlugin,
+  imageOptimizationPlugin,
+  metadataExtractionPlugin,
+  analyticsPlugin,
+  retryPlugin,
+} from '@fluxmedia/plugins';
+
+// Validate file type and size
+await uploader.use(fileValidationPlugin({
+  maxSize: 10 * 1024 * 1024,
+  allowedTypes: ['image/*', 'video/*'],
+}));
+
+// Automatic retry with exponential backoff
+await uploader.use(retryPlugin({ maxRetries: 3 }));
+```
+
+- **File Validation** — Type, size, and extension checks
+- **Image Optimization** — Resize and compress before upload
+- **Metadata Extraction** — Extract EXIF, dimensions, file hash
+- **Analytics** — Configurable logging and tracking
+- **Retry** — Automatic retry with exponential backoff
 
 ## Next Steps
 
 - [Getting Started Guide](/blog/getting-started-with-fluxmedia)
-- [Using Multiple Providers with Zero Effort](/blog/using-multiple-providers-zero-effort)
+- [Using Multiple Providers Together](/blog/using-multiple-providers-zero-effort)
+- [Advanced Features: Streaming, Abort & Transactions](/blog/advanced-uploads-streaming-abort-transactions)
 - [Full Documentation](/docs)

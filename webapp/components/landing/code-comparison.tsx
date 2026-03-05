@@ -52,7 +52,7 @@ await uploader.use(fileValidationPlugin({
 await uploader.use(loggerPlugin());
 await uploader.use(retryPlugin({ maxRetries: 3 }));
 
-// Same API for S3, R2, or Cloudinary!
+// One API for S3, R2, and Cloudinary!
 await uploader.upload(file, {
   folder: "uploads",
   metadata: { type: "avatar" }
@@ -71,7 +71,7 @@ const uploader = new MediaUploader(
   })
 );
 
-// Works the same for S3, R2, or Cloudinary!
+// One API for S3, R2, and Cloudinary!
 await uploader.upload(file, {
   folder: "uploads",
   metadata: { type: "avatar" }

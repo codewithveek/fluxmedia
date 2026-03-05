@@ -1,0 +1,15 @@
+<svg width="264" height="64" viewBox="0 0 264 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="#00B37D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 14L28 28" />
+    <path d="M18 32H28" />
+    <path d="M18 50L28 36" />
+    <path d="M38 32H40" />
+  </g>
+  <circle cx="14" cy="14" r="4" fill="#00B37D" />
+  <circle cx="14" cy="32" r="4" fill="#00B37D" />
+  <circle cx="14" cy="50" r="4" fill="#00B37D" />
+  <circle cx="33" cy="32" r="5" fill="#00B37D" />
+  <circle cx="50" cy="32" r="10" stroke="#00B37D" stroke-width="4" />
+  <path d="M47 27L55 32L47 37V27Z" fill="#00B37D" />
+  <text x="76" y="40" font-size="30" font-weight="700" font-family="Inter, Segoe UI, Arial, sans-serif" fill="#101828">FluxMedia</text>
+</svg>

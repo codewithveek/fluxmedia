@@ -15,11 +15,11 @@ FluxMedia is a TypeScript-first media library that provides a unified API for up
 Install the core package and your preferred provider:
 
 ```bash
-# For S3
-pnpm add @fluxmedia/core @fluxmedia/s3
-
 # For Cloudinary
 pnpm add @fluxmedia/core @fluxmedia/cloudinary
+
+# For S3
+pnpm add @fluxmedia/core @fluxmedia/s3
 
 # For Cloudflare R2
 pnpm add @fluxmedia/core @fluxmedia/r2
@@ -31,14 +31,13 @@ Create your first uploader in just a few lines:
 
 ```typescript
 import { MediaUploader } from '@fluxmedia/core';
-import { S3Provider } from '@fluxmedia/s3';
+import { CloudinaryProvider } from '@fluxmedia/cloudinary';
 
 const uploader = new MediaUploader(
-  new S3Provider({
-    region: 'us-east-1',
-    bucket: 'my-bucket',
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+  new CloudinaryProvider({
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
   })
 );
 ```
@@ -51,30 +50,89 @@ Now upload a file:
 const result = await uploader.upload(file, {
   folder: 'uploads',
   filename: 'profile-photo',
-  metadata: { userId: '123' },
 });
 
-console.log(result.url);
-// https://my-bucket.s3.amazonaws.com/uploads/profile-photo.jpg
+console.log(result.url);        // https://res.cloudinary.com/...
+console.log(result.id);         // uploads/profile-photo
+console.log(result.storageKey); // Provider-specific storage key
+console.log(result.format);     // jpg
+```
+
+## Streaming Uploads
+
+FluxMedia accepts more than just `File` and `Buffer`. You can upload directly from Node.js streams or web `ReadableStream`:
+
+```typescript
+import { createReadStream } from 'fs';
+
+// Upload from a Node.js Readable stream
+const stream = createReadStream('/path/to/large-file.mp4');
+const result = await uploader.upload(stream, {
+  folder: 'videos',
+  contentType: 'video/mp4',
+});
+
+// Upload from a web ReadableStream (e.g. fetch response)
+const response = await fetch('https://example.com/image.jpg');
+const result = await uploader.upload(response.body!, {
+  folder: 'imports',
+});
+```
+
+This makes it easy to pipe data from any source directly into your provider without buffering the entire file in memory.
+
+## Progress Tracking
+
+Track upload progress with two levels of granularity:
+
+```typescript
+const result = await uploader.upload(file, {
+  folder: 'uploads',
+  onProgress: (percent) => {
+    // Normalized 0-100 percentage
+    progressBar.style.width = `${percent}%`;
+  },
+  onByteProgress: (loaded, total) => {
+    // Raw byte counts for precise tracking
+    console.log(`${loaded}/${total} bytes`);
+  },
+});
+```
+
+## Cancelling Uploads
+
+Cancel in-flight uploads using the standard `AbortController`:
+
+```typescript
+const controller = new AbortController();
+
+// Cancel after 30 seconds
+setTimeout(() => controller.abort(), 30_000);
+
+const result = await uploader.upload(file, {
+  folder: 'uploads',
+  signal: controller.signal,
+});
 ```
 
 ## What Makes FluxMedia Different?
 
-### Unified API
- 
-Write your upload logic once. Use it with any provider.
- 
+### One Unified API
+
+Write your upload logic once. Integrate with any supported provider using the same interface:
+
 ```typescript
-// Need to use Cloudinary instead? Same API!
+// Using Cloudinary
 const uploader = new MediaUploader(
-  new CloudinaryProvider({
-    cloudName: 'my-cloud',
-    apiKey: '...',
-    apiSecret: '...',
-  })
+  new CloudinaryProvider({ cloudName: '...', apiKey: '...', apiSecret: '...' })
 );
- 
-// Same upload code works everywhere!
+
+// Or using S3 — exact same upload code
+import { S3Provider } from '@fluxmedia/s3';
+const uploader = new MediaUploader(
+  new S3Provider({ region: 'us-east-1', bucket: 'my-bucket', ... })
+);
+
 await uploader.upload(file, { folder: 'uploads' });
 ```
 
@@ -84,32 +142,40 @@ FluxMedia is built with TypeScript from the ground up. Enjoy full autocomplete a
 
 ```typescript
 const result = await uploader.upload(file);
-// result.url ✓
-// result.width ✓
-// result.invalidProp ✗ TypeScript error!
+// result.url         ✓
+// result.storageKey   ✓
+// result.invalidProp  ✗ TypeScript error!
 ```
 
 ### Extensible Plugin System
 
-Add functionality with plugins:
+Add functionality with the official plugins or build your own:
 
 ```typescript
-import { createPlugin } from '@fluxmedia/core';
+import { fileValidationPlugin, retryPlugin } from '@fluxmedia/plugins';
 
-const loggerPlugin = createPlugin('logger', {
-  afterUpload: async (result) => {
-    console.log('Uploaded:', result.url);
-    return result;
-  }
-});
+await uploader.use(fileValidationPlugin({
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedTypes: ['image/*'],
+}));
+await uploader.use(retryPlugin({ maxRetries: 3 }));
+```
 
-await uploader.use(loggerPlugin);
+### Feature Detection
+
+Check if a provider supports specific capabilities:
+
+```typescript
+if (uploader.supports('transformations.resize')) {
+  const url = uploader.getUrl(id, { width: 200, height: 200 });
+}
 ```
 
 ## Next Steps
 
 - [Explore the Plugin System](/blog/understanding-the-plugin-system)
-- [Using Multiple Providers with Zero Effort](/blog/using-multiple-providers-zero-effort)
+- [Using Multiple Providers Together](/blog/using-multiple-providers-zero-effort)
+- [Advanced Features: Streaming, Abort & Transactions](/blog/advanced-uploads-streaming-abort-transactions)
 - [Read the full documentation](/docs)
 
 Happy uploading!

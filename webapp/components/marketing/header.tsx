@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Github, UploadCloud, Menu, X } from 'lucide-react';
+import { Github, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { FluxMediaLogo } from '@/components/brand/fluxmedia-logo';
 
 export function Header({ stats }: { stats?: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -28,8 +29,7 @@ export function Header({ stats }: { stats?: React.ReactNode }) {
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4 md:px-6">
         <Link href="/" className="mr-8 flex items-center space-x-2.5">
-          <UploadCloud className="h-5 w-5 text-brand" />
-          <span className="font-bold text-base tracking-tight">FluxMedia</span>
+          <FluxMediaLogo />
         </Link>
 
         {/* Desktop Navigation */}
