@@ -13,17 +13,17 @@ export default function Home() {
       <ProvidersSection />
 
       {/* CTA Section */}
-      <section className="py-24 lg:py-32 border-t border-border/40 bg-gradient-to-b from-muted/30 to-background">
+      <section className="py-24 lg:py-32 border-t border-border/40 grid-bg">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
             Ready to simplify your media uploads?
           </h2>
           <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Join developers building faster with FluxMedia. Get started in minutes with comprehensive documentation and examples.
+            Join developers building faster with FluxMedia. Get started in minutes with comprehensive docs and examples.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="font-semibold bg-indigo-500 hover:bg-indigo-600" asChild>
-              <Link href="/docs">
+            <Button size="lg" asChild>
+              <Link href="https://docs.fluxmedia.dev">
                 <BookOpen className="mr-2 h-4 w-4" />
                 Read the Docs
               </Link>

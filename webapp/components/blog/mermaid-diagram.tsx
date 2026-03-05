@@ -12,20 +12,20 @@ mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
     themeVariables: {
-        primaryColor: "#6366f1",
-        primaryTextColor: "#fff",
-        primaryBorderColor: "#4f46e5",
-        lineColor: "#a5b4fc",
-        secondaryColor: "#1e1b4b",
-        tertiaryColor: "#312e81",
-        background: "#18181b",
-        mainBkg: "#27272a",
-        secondBkg: "#3f3f46",
-        nodeBorder: "#6366f1",
-        clusterBkg: "#27272a",
-        clusterBorder: "#4f46e5",
-        titleColor: "#e5e7eb",
-        edgeLabelBackground: "#27272a",
+        primaryColor: "#00e5a0",
+        primaryTextColor: "#060609",
+        primaryBorderColor: "#00c98c",
+        lineColor: "#00e5a066",
+        secondaryColor: "#0d0d14",
+        tertiaryColor: "#12121c",
+        background: "#060609",
+        mainBkg: "#0d0d14",
+        secondBkg: "#12121c",
+        nodeBorder: "#00e5a0",
+        clusterBkg: "#0d0d14",
+        clusterBorder: "#00c98c",
+        titleColor: "#f5f5f5",
+        edgeLabelBackground: "#0d0d14",
     },
     flowchart: {
         htmlLabels: true,
@@ -67,7 +67,7 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
     return (
         <div
             ref={containerRef}
-            className="my-6 p-4 rounded-lg bg-zinc-900 border border-zinc-800 overflow-x-auto flex justify-center"
+            className="my-6 p-4 rounded-lg bg-surface border border-border overflow-x-auto flex justify-center"
             dangerouslySetInnerHTML={{ __html: svg }}
         />
     );

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 export default function ChangelogPage() {
     return (
         <div className="container py-24 text-center max-w-2xl">
-            <div className="mb-8 p-4 rounded-full bg-emerald-500/10 text-emerald-500 inline-block w-16 h-16 flex items-center justify-center mx-auto">
+            <div className="mb-8 p-4 rounded-lg bg-brand-muted text-brand inline-block w-16 h-16 flex items-center justify-center mx-auto">
                 <span className="text-2xl">🚀</span>
             </div>
             <h1 className="text-4xl font-bold mb-4">Changelog</h1>
@@ -13,9 +13,9 @@ export default function ChangelogPage() {
                 Track the latest updates and improvements to FluxMedia.
             </p>
 
-            <div className="group rounded-lg border border-border bg-card p-6 text-left mb-8 shadow-sm hover:shadow-md transition-all">
+            <div className="group rounded-xl border border-border bg-card p-6 text-left mb-8 transition-all hover:border-brand/30">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="bg-indigo-500/10 text-indigo-500 px-3 py-1 rounded-full text-xs font-semibold">v0.1.0</div>
+                    <div className="bg-brand-muted text-brand px-3 py-1 rounded-md text-xs font-semibold">v0.1.0</div>
                     <span className="text-sm text-muted-foreground">Feb 3, 2026</span>
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Initial Release</h2>

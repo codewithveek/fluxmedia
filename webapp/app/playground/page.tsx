@@ -155,9 +155,9 @@ export default function PlaygroundPage() {
                 Edit the code directly in StackBlitz to experiment!
             </div>
 
-            <div className="flex-1 rounded-xl border border-border/50 bg-zinc-950 overflow-hidden relative shadow-2xl">
+            <div className="flex-1 rounded-xl border border-border/50 bg-surface overflow-hidden relative">
                 {loading && !error && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 z-20">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface text-muted-foreground z-20">
                         <Loader2 className="h-10 w-10 animate-spin mb-4" />
                         <span className="text-lg">Loading StackBlitz WebContainer...</span>
                         <span className="text-sm mt-2">This may take 10-20 seconds on first load</span>
@@ -165,7 +165,7 @@ export default function PlaygroundPage() {
                 )}
 
                 {error && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 z-20">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface text-muted-foreground z-20">
                         <span className="text-lg mb-4">Failed to load playground</span>
                         <Button onClick={handleRetry} variant="outline">
                             Try Again
@@ -188,7 +188,7 @@ export default function PlaygroundPage() {
             </div>
 
             <div className="mt-4 text-center text-sm text-muted-foreground">
-                Powered by <a href="https://stackblitz.com" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">StackBlitz WebContainers</a>
+                Powered by <a href="https://stackblitz.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">StackBlitz WebContainers</a>
             </div>
         </div>
     );

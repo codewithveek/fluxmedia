@@ -30,7 +30,7 @@ export default function BlogPage() {
                     {posts.map((post) => (
                         <article
                             key={post.slug}
-                            className="group rounded-2xl border border-border/50 bg-card p-6 hover:border-indigo-500/30 hover:shadow-lg transition-all duration-300"
+                            className="group rounded-xl border border-border/50 bg-card p-6 hover:border-brand/30 transition-all duration-300"
                         >
                             <Link href={`/blog/${post.slug}`} className="block">
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -48,7 +48,7 @@ export default function BlogPage() {
                                     </span>
                                 </div>
 
-                                <h2 className="text-xl font-semibold mb-2 group-hover:text-indigo-500 transition-colors">
+                                <h2 className="text-xl font-semibold mb-2 group-hover:text-brand transition-colors">
                                     {post.title}
                                 </h2>
 
@@ -61,7 +61,7 @@ export default function BlogPage() {
                                         {post.tags.map(tag => (
                                             <span
                                                 key={tag}
-                                                className="px-2 py-1 text-xs rounded-full bg-indigo-500/10 text-indigo-500"
+                                                className="px-2 py-1 text-xs rounded-md bg-brand-muted text-brand"
                                             >
                                                 {tag}
                                             </span>
@@ -69,7 +69,7 @@ export default function BlogPage() {
                                     </div>
                                 )}
 
-                                <span className="inline-flex items-center text-sm font-medium text-indigo-500">
+                                <span className="inline-flex items-center text-sm font-medium text-brand">
                                     Read more <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </Link>

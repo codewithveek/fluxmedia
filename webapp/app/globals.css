@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-border: hsl(var(--border));
@@ -32,15 +32,22 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
+  /* Brand colors */
+  --color-brand: #00e5a0;
+  --color-brand-dim: #00e5a033;
+  --color-brand-muted: #00e5a01a;
+  --color-amber: #d4a843;
+  --color-amber-dim: #d4a84333;
+  --color-surface: #0d0d14;
+  --color-surface-raised: #12121c;
+
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes accordion-down {
     from {
       height: 0;
     }
-
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -50,66 +57,34 @@
     from {
       height: var(--radix-accordion-content-height);
     }
-
     to {
       height: 0;
     }
   }
-
-  @keyframes shimmer {
-    from {
-      background-position: 0 0;
-    }
-
-    to {
-      background-position: -200% 0;
-    }
-  }
 }
 
+/* Dark-only design system — enterprise dev tool aesthetic */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
+  --background: 230 25% 3%;
+  --foreground: 0 0% 96%;
+  --card: 230 20% 5.5%;
+  --card-foreground: 0 0% 96%;
+  --popover: 230 20% 5.5%;
+  --popover-foreground: 0 0% 96%;
+  --primary: 160 100% 45%;
+  --primary-foreground: 230 25% 3%;
+  --secondary: 230 15% 12%;
+  --secondary-foreground: 0 0% 85%;
+  --muted: 230 15% 10%;
+  --muted-foreground: 230 10% 55%;
+  --accent: 230 15% 12%;
+  --accent-foreground: 0 0% 96%;
+  --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
+  --border: 230 15% 14%;
+  --input: 230 15% 14%;
+  --ring: 160 100% 45%;
   --radius: 0.5rem;
-}
-
-.dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
 }
 
 @layer base {
@@ -122,4 +97,95 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+
+  /* Force dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
+
+/* ─── Subtle grid background ─── */
+.grid-bg {
+  background-image:
+    linear-gradient(hsl(var(--border) / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.35) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* ─── Corner bracket decoration for cards ─── */
+.bracket-border {
+  position: relative;
+}
+.bracket-border::before,
+.bracket-border::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.bracket-border::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--color-brand);
+  border-left: 2px solid var(--color-brand);
+}
+.bracket-border::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--color-brand);
+  border-right: 2px solid var(--color-brand);
+}
+
+/* ─── Terminal window chrome ─── */
+.terminal-window {
+  background: var(--color-surface);
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--border) / 0.3);
+}
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+.terminal-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+.terminal-body {
+  padding: 1.25rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+.terminal-body .prompt {
+  color: hsl(var(--muted-foreground));
+}
+.terminal-body .cmd {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+.terminal-body .comment {
+  color: hsl(var(--muted-foreground) / 0.6);
+}
+.terminal-body .success {
+  color: var(--color-brand);
 }

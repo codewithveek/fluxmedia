@@ -64,7 +64,7 @@ export default async function BlogPostPage({ params }: Props) {
                         {meta.tags.map(tag => (
                             <span
                                 key={tag}
-                                className="px-3 py-1 text-sm rounded-full bg-indigo-500/10 text-indigo-500 font-medium"
+                                className="px-3 py-1 text-sm rounded-md bg-brand-muted text-brand font-medium"
                             >
                                 {tag}
                             </span>
