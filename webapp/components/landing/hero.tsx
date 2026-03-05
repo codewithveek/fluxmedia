@@ -9,8 +9,8 @@ import { motion } from 'framer-motion';
 export function Hero() {
   return (
     <section className="relative overflow-hidden grid-bg">
-      <div className="container relative z-10 mx-auto px-4 max-w-7xl pt-24 pb-28 lg:pt-32 lg:pb-40">
-        <div className="mx-auto max-w-3xl text-center mb-24">
+      <div className="container relative z-10 mx-auto px-4 max-w-7xl pt-20 pb-24 lg:pt-24 lg:pb-30">
+        <div className="mx-auto max-w-3xl text-center mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -51,7 +51,7 @@ export function Hero() {
             </div>
 
             {/* Install command — terminal style */}
-            <div className="mt-12 flex justify-center">
+            <div className="mt-16 flex justify-center">
               <div className="terminal-window max-w-lg w-full text-left">
                 <div className="terminal-bar">
                   <div className="terminal-dots">

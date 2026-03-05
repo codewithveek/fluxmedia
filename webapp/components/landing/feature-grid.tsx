@@ -123,9 +123,9 @@ function UnifiedApiCodeSnippet() {
 
 export function FeatureGrid() {
   return (
-    <section className="py-24 lg:py-32 border-t border-border/40">
+    <section className="py-20 lg:py-28 border-t border-border/40">
       <div className="container mx-auto px-4 max-w-7xl">
-        <div className="max-w-3xl mx-auto text-center mb-16">
+        <div className="max-w-3xl mx-auto text-center mb-12">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand mb-4">Features</p>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
             Everything you need for media uploads

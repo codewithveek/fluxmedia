@@ -13,7 +13,7 @@ export default function Home() {
       <ProvidersSection />
 
       {/* CTA Section */}
-      <section className="py-24 lg:py-32 border-t border-border/40 grid-bg">
+      <section className="py-20 lg:py-28 border-t border-border/40 grid-bg">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-4">
             Ready to simplify your media uploads?

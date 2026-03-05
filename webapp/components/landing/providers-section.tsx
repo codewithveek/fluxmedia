@@ -50,7 +50,7 @@ const featureLabels = [
 
 export function ProvidersSection() {
   return (
-    <section className="py-24 lg:py-32 border-t border-border/40">
+    <section className="py-20 lg:py-22 border-t border-border/40">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="text-center mb-16">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand mb-4">
