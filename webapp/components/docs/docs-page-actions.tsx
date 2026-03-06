@@ -41,7 +41,7 @@ export function DocsPageActions({ title, markdown, canonicalUrl }: DocsPageActio
         <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
 
-      <div className="absolute right-100 z-30 mt-2 w-68 space-y-1 rounded-lg border border-border bg-popover p-2 shadow-xl">
+      <div className="absolute right-0 z-30 mt-2 w-68 space-y-1 rounded-lg border border-border bg-popover p-2 shadow-xl">
         {/* <button
           type="button"
           onClick={() => copyText(canonicalUrl, 'url')}

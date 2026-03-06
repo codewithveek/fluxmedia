@@ -67,7 +67,9 @@ async function loadPagefindModule(): Promise<PagefindModule | null> {
         resolve(window.pagefind);
       };
 
-      const existingScript = document.querySelector<HTMLScriptElement>('script[data-pagefind-script]');
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[data-pagefind-script]'
+      );
       const script = existingScript || document.createElement('script');
 
       if (!existingScript) {
@@ -212,7 +214,7 @@ export function DocsSearch({ className }: DocsSearchProps) {
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[90] bg-background/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-90 bg-background/70 p-4 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         >
           <div
