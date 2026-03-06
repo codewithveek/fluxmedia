@@ -1,11 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import {
-  getDocBySlug,
-  getAllDocSlugs,
-  getDocPrevNext,
-  getDocBreadcrumbs,
-} from '@/lib/docs';
+import { getDocBySlug, getAllDocSlugs, getDocPrevNext, getDocBreadcrumbs } from '@/lib/docs';
 import { notFound } from 'next/navigation';
 import { DocsContent } from '@/components/docs/docs-content';
 import { DocsToc } from '@/components/docs/docs-toc';
@@ -166,8 +161,11 @@ export default async function DocsPage({ params }: Props) {
       />
 
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-4 max-w-2xl">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
             <Link href="/docs" className="transition-colors hover:text-foreground">
               Docs
             </Link>

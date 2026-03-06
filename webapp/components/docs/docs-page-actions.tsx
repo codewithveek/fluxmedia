@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Check, ChevronDown, Copy, ExternalLink } from 'lucide-react';
-
+import { ChatGPTLogo } from '@/components/chatgpt-logo';
+import { ClaudeLogo } from '@/components/claude-logo';
 interface DocsPageActionsProps {
   title: string;
   markdown: string;
@@ -33,14 +34,14 @@ export function DocsPageActions({ title, markdown, canonicalUrl }: DocsPageActio
   };
 
   return (
-    <details className="group relative">
+    <details className="group relative ">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/40 [&::-webkit-details-marker]:hidden">
         <Copy className="h-4 w-4 text-muted-foreground" />
         Copy page
         <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
 
-      <div className="absolute right-0 z-30 mt-2 w-68 rounded-lg border border-border bg-popover p-2 shadow-xl">
+      <div className="absolute right-100 z-30 mt-2 w-68 space-y-1 rounded-lg border border-border bg-popover p-2 shadow-xl">
         {/* <button
           type="button"
           onClick={() => copyText(canonicalUrl, 'url')}
@@ -53,7 +54,7 @@ export function DocsPageActions({ title, markdown, canonicalUrl }: DocsPageActio
         <button
           type="button"
           onClick={() => copyText(markdown, 'markdown')}
-          className="flex gap-2 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-popover-foreground transition-colors hover:bg-accent/60"
+          className="flex gap-3 w-full items-center  rounded-md px-3 py-2 text-left text-sm text-popover-foreground transition-colors hover:bg-accent/60"
         >
           {copiedTarget === 'markdown' ? (
             <Check className="h-4 w-4 text-brand" />
@@ -70,20 +71,26 @@ export function DocsPageActions({ title, markdown, canonicalUrl }: DocsPageActio
           href={chatGptUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-accent/60"
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-accent/60"
         >
-          <span>Open in ChatGPT</span>
-          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          <ChatGPTLogo className="h-4 w-4 text-muted-foreground" />
+          <span className="flex justify-between flex-1">
+            <span>Open in ChatGPT</span>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </span>
         </a>
 
         <a
           href={claudeUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-accent/60"
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-accent/60"
         >
-          <span>Open in Claude</span>
-          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          <ClaudeLogo className="h-4 w-4 text-muted-foreground" />
+          <span className="flex justify-between flex-1">
+            <span>Open in Claude</span>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </span>
         </a>
       </div>
     </details>

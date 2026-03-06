@@ -71,67 +71,69 @@ export function DocsToc({ headings, editUrl, feedbackUrl, lastUpdated }: DocsToc
 
   return (
     <aside className="hidden xl:block">
-      <div className="flex flex-col sticky top-24 space-y-6">
-        <div className="flex-1 overflow-y-auto rounded-lg border border-border/70 bg-card/50 p-4">
-          <h2 className="text-sm font-semibold text-foreground">On This Page</h2>
+      <div className="sticky top-24">
+        <div className="flex min-h-0 flex-col gap-6 max-h-[calc(100vh-8rem)]">
+          <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-border/70 bg-card/50 p-4">
+            <h2 className="text-sm font-semibold text-foreground">On This Page</h2>
 
-          <nav className="mt-3">
-            <ul className="space-y-1.5">
-              {headings.map((heading) => (
-                <li key={heading.id}>
-                  <a
-                    href={`#${heading.id}`}
-                    className={cn(
-                      'block border-l pl-3 text-sm leading-5 transition-colors',
-                      heading.level === 3 ? 'ml-3' : '',
-                      activeHeadingId === heading.id
-                        ? 'border-brand text-brand'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {heading.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+            <nav className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 pb-3">
+              <ul className="space-y-1.5">
+                {headings.map((heading) => (
+                  <li key={heading.id}>
+                    <a
+                      href={`#${heading.id}`}
+                      className={cn(
+                        'block border-l pl-3 text-sm leading-5 transition-colors',
+                        heading.level === 3 ? 'ml-3' : '',
+                        activeHeadingId === heading.id
+                          ? 'border-brand text-brand'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {heading.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
 
-          {headings.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            {headings.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="mt-4 inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+                Scroll to top
+              </button>
+            ) : null}
+          </div>
+
+          <div className="shrink-0 rounded-lg border border-border/70 bg-card/50 p-4 text-sm">
+            <a
+              href={feedbackUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ArrowUp className="h-3.5 w-3.5" />
-              Scroll to top
-            </button>
-          ) : null}
-        </div>
+              <MessageSquare className="h-4 w-4" />
+              Question? Give us feedback
+            </a>
 
-        <div className="rounded-lg border border-border/70 bg-card/50 p-4 text-sm">
-          <a
-            href={feedbackUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Question? Give us feedback
-          </a>
+            <a
+              href={editUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <PencilLine className="h-4 w-4" />
+              Edit this page
+            </a>
 
-          <a
-            href={editUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <PencilLine className="h-4 w-4" />
-            Edit this page
-          </a>
-
-          <p className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-            Last updated on {formattedLastUpdated}
-          </p>
+            <p className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+              Last updated on {formattedLastUpdated}
+            </p>
+          </div>
         </div>
       </div>
     </aside>

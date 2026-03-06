@@ -6,7 +6,8 @@
     "dev": "next dev --port=3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -36,6 +37,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9.39.3",
     "eslint-config-next": "16.1.6",
+    "pagefind": "^1.4.0",
     "react-dom": "19.2.3",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"

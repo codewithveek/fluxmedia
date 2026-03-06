@@ -6,6 +6,7 @@ import { Github, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { FluxMediaLogo } from '@/components/brand/fluxmedia-logo';
+import { DocsSearch } from '@/components/docs/docs-search';
 
 export function Header({ stats }: { stats?: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,6 +47,7 @@ export function Header({ stats }: { stats?: React.ReactNode }) {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-3">
+          <DocsSearch />
           {stats}
           <ThemeToggle />
           <Button
