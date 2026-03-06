@@ -83,7 +83,7 @@ export function CodeComparison() {
   const [oldHtml, setOldHtml] = useState('');
   const [pluginHtml, setPluginHtml] = useState('');
   const [basicHtml, setBasicHtml] = useState('');
-  const [copied, setCopied] = useState(false);
+  // const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('plugins');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -106,12 +106,7 @@ export function CodeComparison() {
     highlight();
   }, []);
 
-  const copyCode = () => {
-    const code = activeTab === 'plugins' ? PLUGIN_WAY : BASIC_WAY;
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  
 
   const currentHtml = activeTab === 'plugins' ? pluginHtml : basicHtml;
   const collapsedHeight = 280;
@@ -130,7 +125,7 @@ export function CodeComparison() {
         </div>
         <div className="p-5">
           <div
-            className="text-sm font-mono overflow-x-auto [&>pre]:bg-transparent! [&>pre]:p-0 opacity-50"
+            className="text-sm font-mono overflow-x-auto  [&>pre]:p-0 "
             dangerouslySetInnerHTML={{
               __html: oldHtml || "<div class='text-muted-foreground'>Loading...</div>",
             }}
@@ -142,9 +137,9 @@ export function CodeComparison() {
       <div className="relative terminal-window ring-1 ring-brand/20 border-brand/30">
         <div className="terminal-bar">
           <div className="terminal-dots">
-            <span className="!bg-red-500/70" />
-            <span className="!bg-yellow-500/70" />
-            <span className="!bg-green-500/70" />
+            <span className="bg-red-500/70!" />
+            <span className="bg-yellow-500/70!" />
+            <span className="bg-green-500/70!" />
           </div>
           <span className="text-xs font-medium text-brand">FluxMedia Way</span>
         </div>
@@ -195,7 +190,7 @@ export function CodeComparison() {
             </AnimatePresence>
 
             {!isExpanded && (
-              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-surface via-surface/90 to-transparent pointer-events-none" />
             )}
           </div>
 
@@ -219,15 +214,7 @@ export function CodeComparison() {
           </div>
         </div>
 
-        {/* Copy button */}
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-3 right-3 h-8 w-8 text-muted-foreground hover:text-foreground"
-          onClick={copyCode}
-        >
-          {copied ? <Check className="h-4 w-4 text-brand" /> : <Copy className="h-4 w-4" />}
-        </Button>
+       
       </div>
     </div>
   );

@@ -30,12 +30,7 @@ interface PagefindModule {
 
 const MIN_QUERY_LENGTH = 2;
 
-declare global {
-  interface Window {
-    pagefind?: PagefindModule;
-    __fluxmediaPagefindLoader?: Promise<PagefindModule | null>;
-  }
-}
+let pagefindPromise: Promise<PagefindModule | null> | null = null;
 
 function stripHtml(input: string): string {
   return input
@@ -49,45 +44,22 @@ async function loadPagefindModule(): Promise<PagefindModule | null> {
     return null;
   }
 
-  if (window.pagefind) {
-    const optionsResult = window.pagefind.options?.({ baseUrl: '/' });
-    await optionsResult;
-    return window.pagefind;
-  }
-
-  if (!window.__fluxmediaPagefindLoader) {
-    window.__fluxmediaPagefindLoader = new Promise<PagefindModule | null>((resolve) => {
-      const handleLoaded = async () => {
-        if (!window.pagefind) {
-          resolve(null);
-          return;
-        }
-        const optionsResult = window.pagefind.options?.({ baseUrl: '/' });
-        await optionsResult;
-        resolve(window.pagefind);
-      };
-
-      const existingScript = document.querySelector<HTMLScriptElement>(
-        'script[data-pagefind-script]'
-      );
-      const script = existingScript || document.createElement('script');
-
-      if (!existingScript) {
-        script.src = '/_pagefind/pagefind.js';
-        script.async = true;
-        script.defer = true;
-        script.dataset.pagefindScript = 'true';
-        document.body.appendChild(script);
+  if (!pagefindPromise) {
+    pagefindPromise = (async () => {
+      try {
+        const pf = await import(
+          // @ts-expect-error — pagefind is generated at build time, not a real module
+          /* webpackIgnore: true */ '/_pagefind/pagefind.js'
+        );
+        await pf.options?.({ baseUrl: '/' });
+        return pf as PagefindModule;
+      } catch {
+        return null;
       }
-
-      script.addEventListener('load', () => {
-        void handleLoaded();
-      });
-      script.addEventListener('error', () => resolve(null));
-    });
+    })();
   }
 
-  return window.__fluxmediaPagefindLoader;
+  return pagefindPromise;
 }
 
 export function DocsSearch({ className }: DocsSearchProps) {
@@ -163,9 +135,12 @@ export function DocsSearch({ className }: DocsSearchProps) {
         const resolvedResults = await Promise.all(
           topResults.map(async (result) => {
             const data = await result.data();
+            // Pagefind returns .html URLs from the build output; strip the
+            // extension so Next.js clean URLs resolve correctly.
+            const cleanUrl = data.url.replace(/\.html$/, '').replace(/\/index$/, '') || '/';
             return {
-              url: data.url,
-              title: data.meta?.title || data.url,
+              url: cleanUrl,
+              title: data.meta?.title || cleanUrl,
               excerpt: stripHtml(data.excerpt || ''),
             };
           })

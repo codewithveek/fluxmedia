@@ -160,7 +160,7 @@ export default async function DocsPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: toJsonLd(articleJsonLd) }}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-6" data-pagefind-body>
         <div className="flex flex-wrap items-center justify-between gap-4 max-w-2xl">
           <nav
             aria-label="Breadcrumb"
