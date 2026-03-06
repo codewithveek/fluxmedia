@@ -34,7 +34,7 @@ export function Hero() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="https://docs.fluxmedia.dev">
+                <Link href="/docs">
                   Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
