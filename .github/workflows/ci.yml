@@ -47,13 +47,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: |
-          pnpm --filter @fluxmedia/core build
-          pnpm --filter @fluxmedia/cloudinary build
-          pnpm --filter @fluxmedia/s3 build
-          pnpm --filter @fluxmedia/r2 build
-          pnpm --filter @fluxmedia/react build
-          pnpm --filter @fluxmedia/plugins build
+        run: pnpm build
 
   test:
     name: Test
@@ -85,10 +79,48 @@ jobs:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
 
+  integration:
+    name: S3 integration (LocalStack)
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:3.8
+        ports:
+          - 4566:4566
+        env:
+          SERVICES: s3
+          # Validate SigV4 so presigned URL limits are really enforced
+          S3_SKIP_SIGNATURE_VALIDATION: '0'
+        options: >-
+          --health-cmd "curl -sf http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-retries 30
+    env:
+      S3_INTEGRATION_ENDPOINT: http://localhost:4566
+      S3_INTEGRATION_ACCESS_KEY: test
+      S3_INTEGRATION_SECRET_KEY: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run S3 integration tests
+        run: pnpm vitest run packages/s3/src/__tests__/integration.test.ts
+
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [lint, build, test]
+    needs: [lint, build, test, integration]
     if: github.ref == 'refs/heads/main'
 
     # Required for OIDC provenance + changesets PR creation

@@ -72,6 +72,18 @@ export default [
             ],
             // Disable base rule in favor of TS rule
             'no-unused-vars': 'off',
+            // TypeScript already reports undefined identifiers (and knows DOM/Node types);
+            // typescript-eslint recommends disabling no-undef for TS files.
+            'no-undef': 'off',
+        },
+    },
+
+    // Node scripts
+    {
+        files: ['scripts/**/*.mjs'],
+        languageOptions: {
+            sourceType: 'module',
+            globals: { console: 'readonly', process: 'readonly' },
         },
     },
 

@@ -1,40 +1,50 @@
 # FluxMedia Documentation
 
-> FluxMedia is a provider-agnostic media upload library for JavaScript and TypeScript. It provides a unified API for uploading images, videos, and files to any cloud storage provider including Cloudinary, AWS S3, and Cloudflare R2. Write your upload logic once, switch providers without changing code.
+> FluxMedia is a unified media upload library for JavaScript and TypeScript. It provides one API for uploading images, videos, and files to Cloudinary, AWS S3 (and S3-compatible storage), Cloudflare R2, Google Cloud Storage, Azure Blob Storage, or the local filesystem. Write your upload logic once, and it works with every provider.
 
-FluxMedia is available as a set of npm packages under the `@fluxmedia` scope. The core package provides the `MediaUploader` class, plugin system, and structured error handling, while provider packages implement the `MediaProvider` interface for specific services. A React integration package provides hooks and components for client-side uploads.
+FluxMedia is an open-source library — not a storage service. It wraps existing providers behind the `MediaProvider` interface, published as npm packages under the `@fluxmedia` scope.
 
-- FluxMedia is *not* a storage service — it is a library that wraps existing providers
-- All providers share the same API surface: `upload`, `delete`, `get`, `getUrl`, `getUrlAsync`, `uploadMultiple`, `deleteMultiple`, `uploadWithTransaction`
-- Supports multiple input types: `File`, `Buffer`, `Readable`, `ReadableStream`
-- Fallback providers for automatic failover on errors
-- Plugins extend behavior via lifecycle hooks: `beforeUpload`, `afterUpload`, `onError`, `beforeDelete`, `afterDelete`, `beforeGetUrl`
-- Optional plugins degrade gracefully — errors in non-critical plugins don't block uploads
-- Structured errors with `MediaErrorCode` enum and `PartialUploadError` for resumable multipart uploads
-- 179 tests across all packages
+- One API on every provider: `upload`, `get`, `delete`, `getUrl`, `getSignedUrl`, `createUploadUrl`, `exists`, `list`/`listAll`, `copy`, `move`, `download`, `updateMetadata`, `uploadMultiple`, `deleteMultiple`, `uploadWithTransaction`
+- Secure browser uploads: `createSignedUploadHandler` and `createProxyUploadHandler` from `@fluxmedia/core/server` require authorization, an allowed-type list and a size limit, decide the folder on the server, and detect file types from content
+- Private files: public URLs are optional; time-limited signed URLs on every provider (S3/R2 presigned, GCS V4, Azure SAS, Cloudinary private download or token auth, HMAC for local/R2 bindings)
+- Accepts `File`, `Buffer`, Node `Readable` and web `ReadableStream`; byte progress; cancel with `AbortSignal`
+- Fallback providers, transactional uploads, retry with backoff
+- Plugins via lifecycle hooks: `beforeUpload`, `wrapUpload`, `afterUpload`, `onError`, `beforeDelete`, `afterDelete`, `beforeGetUrl`
+- Structured errors with the `MediaErrorCode` enum (including `ABORTED`, `NOT_SUPPORTED`, `RATE_LIMITED`)
+- React integration: `useMediaUpload`, `useMediaUploadQueue`, `MediaUpload`
+- Only top-level primitive metadata is stored with files; keys and folders are sanitized
 
 ## Docs
 
-- [Getting Started](https://www.fluxmedia.dev/docs/getting-started): Installation, basic usage, streaming uploads, fallback providers, abort support, React integration
-- [API Reference](https://www.fluxmedia.dev/docs/api): Complete API for MediaUploader, MediaUploaderConfig, UploadInput, types, errors, PartialUploadError, plugin types, analytics events, testing utilities
-- [Plugins](https://www.fluxmedia.dev/docs/plugins): Official plugins (file validation, image optimization, metadata extraction, analytics, retry with PartialUploadError resume) and custom plugin creation
-- [React Integration](https://www.fluxmedia.dev/docs/react): useMediaUpload hook, MediaUpload component, upload modes (signed, proxy, direct), preview, and file type detection
+- [Getting Started](https://www.fluxmedia.dev/docs/getting-started): Installation, basic usage, streaming uploads, browser uploads, fallback providers, abort, progress, private files
+- [Providers](https://www.fluxmedia.dev/docs/providers): Provider comparison, choosing a provider, writing a custom provider
+- [Secure Uploads](https://www.fluxmedia.dev/docs/secure-uploads): Signed and proxy upload handlers, allowed types, private files, ownership checks, checklist
+- [Plugins](https://www.fluxmedia.dev/docs/plugins): Validation, optimization, metadata, virus scanning, dedupe, placeholders, analytics, retry, custom plugins
+- [React Integration](https://www.fluxmedia.dev/docs/react): useMediaUpload, useMediaUploadQueue, MediaUpload drag-and-drop, cancel, client-side checks
+- [API Reference](https://www.fluxmedia.dev/docs/api): MediaUploader methods, types, MediaProvider interface, errors, plugin hooks, testing utilities
 
 ## Providers
 
-- [Cloudinary Provider](https://www.fluxmedia.dev/docs/providers/cloudinary): Configuration, transformations, signed uploads, and Cloudinary-specific features
-- [AWS S3 Provider](https://www.fluxmedia.dev/docs/providers/s3): Configuration, presigned URLs, multipart uploads, and S3-specific options
-- [Cloudflare R2 Provider](https://www.fluxmedia.dev/docs/providers/r2): Configuration, custom domains, and R2-specific options
+- [Cloudinary Provider](https://www.fluxmedia.dev/docs/cloudinary): Transformations, private assets, signed URLs and uploads, search
+- [AWS S3 Provider](https://www.fluxmedia.dev/docs/s3): Credentials chain, private buckets, presigned URLs, CloudFront, S3-compatible services, file operations
+- [Cloudflare R2 Provider](https://www.fluxmedia.dev/docs/r2): Public or private buckets, presigned URLs, Workers bucket bindings
+- [Google Cloud Storage Provider](https://www.fluxmedia.dev/docs/gcs): Application Default Credentials, V4 signed URLs, resumable uploads
+- [Azure Blob Storage Provider](https://www.fluxmedia.dev/docs/azure): Shared key or Entra ID, SAS URLs, block blob streaming
+- [Local Filesystem Provider](https://www.fluxmedia.dev/docs/local): Atomic writes, signed URLs, safe file-serving handler
 
 ## Packages
 
-- `@fluxmedia/core`: Core types, MediaUploader class, plugin system, structured errors, file type detection, testing utilities
-- `@fluxmedia/cloudinary`: Cloudinary provider with image/video transformations
-- `@fluxmedia/s3`: AWS S3 provider with presigned URL support
-- `@fluxmedia/r2`: Cloudflare R2 provider (S3-compatible)
-- `@fluxmedia/react`: React hooks (useMediaUpload) and components (MediaUpload)
-- `@fluxmedia/plugins`: Official plugins for validation, optimization, metadata extraction, analytics, and retry
+- `@fluxmedia/core`: MediaUploader, plugin system, server upload handlers (`@fluxmedia/core/server`), MemoryProvider, signed-URL helpers, structured errors, file type detection, testing utilities (`@fluxmedia/core/testing`)
+- `@fluxmedia/cloudinary`: Cloudinary provider with transformations
+- `@fluxmedia/s3`: AWS S3 and S3-compatible storage (MinIO, Backblaze B2, Wasabi, DigitalOcean Spaces, Supabase Storage)
+- `@fluxmedia/r2`: Cloudflare R2 provider (S3 API) and R2BindingProvider for Workers
+- `@fluxmedia/gcs`: Google Cloud Storage provider
+- `@fluxmedia/azure`: Azure Blob Storage provider
+- `@fluxmedia/local`: Local filesystem provider and file-serving handler
+- `@fluxmedia/react`: React hooks and components
+- `@fluxmedia/plugins`: Official plugins: validation, image optimization, metadata extraction, virus scanning, deduplication, placeholders, analytics, retry
 
 ## Optional
 
+- [Full documentation in one file](https://www.fluxmedia.dev/llms-full.txt)
 - [Source Code](https://github.com/codewithveek/fluxmedia): GitHub repository with full source, examples, and issue tracker

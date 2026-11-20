@@ -49,11 +49,15 @@ interface R2Config {
   bucket: string;           // R2 bucket name
   accessKeyId: string;      // R2 Access Key
   secretAccessKey: string;  // R2 Secret Key
-  publicUrl?: string;       // Custom public URL for the bucket
+  publicUrl?: string;       // Public base URL; omit for private buckets
 }
 ```
 
 > **Note:** Provide either `accountId` or `endpoint`. The endpoint will be auto-generated from accountId if not provided.
+
+### Private buckets and signed URLs
+
+`publicUrl` is optional. Leave it unset when the bucket is private and files are served through short-lived signed URLs. In that case `result.publicUrl` is omitted, and `result.url` / `getUrl()` return the storage endpoint URL, which identifies the object but is only readable with a signed request. Keep `result.storageKey` and sign it when you need to serve the file.
 
 ## Getting R2 Credentials
 
@@ -103,7 +107,7 @@ await uploader.deleteMultiple(['file1', 'file2', 'file3']);
 Access the underlying S3-compatible client for advanced operations:
 
 ```typescript
-const client = uploader.provider.native;
+const client = await (uploader.provider as R2Provider).getClient();
 
 // Use native AWS SDK methods with R2
 const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
@@ -112,9 +116,37 @@ const objects = await client.send(new ListObjectsV2Command({
 }));
 ```
 
+`R2Provider` is an `S3Provider` configured for R2, so it also has `getSignedUrl`, `createUploadUrl` (content type and size are signed), `list`, `copy`, `move`, `download` and `updateMetadata`. For EU or FedRAMP buckets, set `jurisdiction: 'eu' | 'fedramp'`.
+
+## Cloudflare Workers (bucket bindings)
+
+In a Worker, use the R2 binding directly — no AWS SDK and no credentials:
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { R2BindingProvider } from '@fluxmedia/r2';
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const uploader = new MediaUploader(
+      new R2BindingProvider({
+        bucket: env.MEDIA,
+        // Optional: signed links served by your own Worker route
+        signedUrlBase: 'https://media.example.com/files',
+        signingSecret: env.MEDIA_SECRET,
+      })
+    );
+    const result = await uploader.upload(request.body!, { contentType: 'image/png' });
+    return Response.json(result);
+  },
+};
+```
+
+Bindings cannot presign URLs, so `getSignedUrl()` returns an HMAC-signed link to your route; check it there with `verifySignedUrl()` from `@fluxmedia/core`. Streams must have a known length (a request body with `Content-Length`, or a `FixedLengthStream`).
+
 ## Adding Transformations
 
-R2 is storage-only. For image transformations, use [Cloudflare Images](https://developers.cloudflare.com/images/) or consider [Cloudinary](/providers/cloudinary) for built-in support.
+R2 is storage-only. For image transformations, use [Cloudflare Images](https://developers.cloudflare.com/images/) or consider [Cloudinary](https://www.fluxmedia.dev/docs/cloudinary) for built-in support.
 
 ## Environment Variables
 
@@ -123,6 +155,7 @@ CLOUDFLARE_ACCOUNT_ID=your-account-id
 R2_BUCKET=my-bucket
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
+# Optional: omit for a private bucket
 R2_PUBLIC_URL=https://cdn.example.com
 ```
 

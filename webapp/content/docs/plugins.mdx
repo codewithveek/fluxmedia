@@ -143,44 +143,72 @@ This plugin is marked as `optional: true` — analytics failures won't block upl
 
 ### Retry
 
-Provides automatic retry with exponential backoff. Automatically resumes multipart uploads from `PartialUploadError` context.
+Retries failed uploads with exponential backoff and jitter. The plugin wraps the provider upload (`wrapUpload` hook), so registering it is enough.
 
 ```typescript
 import { createRetryPlugin, withRetry } from '@fluxmedia/plugins';
+import { MediaErrorCode } from '@fluxmedia/core';
 
-// 1. Add retry plugin to enrich upload options with retry metadata
-await uploader.use(createRetryPlugin({
-  maxRetries: 3,
-  retryDelay: 1000,
-  exponentialBackoff: true,
-  retryableErrors: [
-    MediaErrorCode.NETWORK_ERROR,
-    MediaErrorCode.RATE_LIMITED,
-    MediaErrorCode.UPLOAD_FAILED,
-  ],
-  onRetry: (attempt, error, delay) => {
-    console.log(`Retry ${attempt} after ${delay}ms`);
-  },
-  shouldRetry: (error, attempt) => {
-    // Custom retry logic
-    return attempt < 5;
-  },
-}));
-
-// 2. Use withRetry for automatic retry logic with PartialUploadError resume
-const result = await withRetry(
-  (resumeContext) => uploader.upload(file, {
-    metadata: resumeContext ? { _resumeFrom: resumeContext } : {},
-  }),
-  { maxRetries: 3, exponentialBackoff: true }
+await uploader.use(
+  createRetryPlugin({
+    maxRetries: 3,
+    retryDelay: 1000,
+    maxDelay: 30_000,
+    retryableErrors: [
+      MediaErrorCode.NETWORK_ERROR,
+      MediaErrorCode.RATE_LIMITED,
+      MediaErrorCode.PROVIDER_ERROR,
+      MediaErrorCode.UPLOAD_FAILED,
+    ],
+    onRetry: (attempt, error, delay) => {
+      console.log(`Retry ${attempt} after ${delay}ms`);
+    },
+  })
 );
+
+await uploader.upload(file); // retried automatically
+
+// withRetry wraps any async function
+const info = await withRetry(() => uploader.get(id), { maxRetries: 2 });
 ```
 
 **Key features:**
-- Exponential backoff: delays double each retry (1s → 2s → 4s → ...)
-- `PartialUploadError` awareness: `withRetry` captures the upload context and passes it to the next attempt, enabling multipart upload resumption
+- Exponential backoff with jitter (delays roughly double each retry, capped by `maxDelay`)
+- Streams are never retried (they can only be read once)
+- Aborted uploads are never retried, and waiting stops as soon as the upload's `signal` aborts
 - Custom `shouldRetry` function for fine-grained control
-- `getRetryConfig(options)` to read retry metadata from upload options
+
+
+---
+
+### Virus Scanning
+
+```typescript
+import { createVirusScanPlugin, createClamAVScanner } from '@fluxmedia/plugins';
+
+await uploader.use(createVirusScanPlugin({ scan: createClamAVScanner({ host: 'clamav' }) }));
+```
+
+Rejects infected files. Fails closed when the scanner is unreachable (`onScannerError: 'allow'` to change), and rejects streams by default (`streams: 'skip'` to change). `scan` can be any `(buffer, info) => Promise<{ clean, threat? }>`.
+
+### Deduplication
+
+```typescript
+import { createDeduplicationPlugin } from '@fluxmedia/plugins';
+
+await uploader.use(createDeduplicationPlugin({ store: myStore }));
+```
+
+Returns the existing result for content already uploaded to the same folder (`metadata.deduplicated: true`). Scoped per folder by default so one user's file is never returned for another user.
+
+### Placeholders
+
+```typescript
+import { createPlaceholderPlugin } from '@fluxmedia/plugins';
+
+await uploader.use(createPlaceholderPlugin({ size: 16 }));
+// result.metadata.placeholder → { dataUri, dominantColor, width, height }
+```
 
 ---
 

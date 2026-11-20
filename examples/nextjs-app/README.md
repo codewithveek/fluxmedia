@@ -1,97 +1,60 @@
 # FluxMedia Next.js Example
 
-Demonstrates using FluxMedia with React hooks, multiple providers, and the plugin system.
+Uploads from a Next.js App Router app to Cloudinary, AWS S3 or Cloudflare R2, using the FluxMedia server handlers and React hook.
 
 ## Features
 
-- **Multiple Providers**: Cloudinary, AWS S3, Cloudflare R2
-- **React Hooks**: `useMediaUpload` for easy client-side uploads
-- **Upload Modes**: Signed URL (direct to provider) or Proxy (through server)
-- **Plugin System**: Logger, Metadata enrichment, Validation plugins
+- **Multiple providers**: Cloudinary, AWS S3, Cloudflare R2, picked per request (`?provider=`)
+- **Signed uploads**: the browser uploads straight to storage with a short-lived target; on S3/R2 the content type and exact size are part of the signature
+- **Proxy uploads**: the file goes through the server so plugins run (retry, logging)
+- **Server-side rules**: authentication, allowed types (checked from the file's bytes), size limit and destination folder are decided on the server
+- **Private buckets**: leave `R2_PUBLIC_URL` unset (or set `AWS_PRIVATE_BUCKET=true`) and read files through `/api/media/url`, which returns 5-minute signed links
 
 ## Setup
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Copy environment template
-cp .env.example .env
-
-# Add your credentials to .env
-```
-
-## Run
-
-```bash
+cp .env.example .env   # then add your credentials
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-## Architecture
+> **Authentication.** `getUser()` in `src/lib/uploaders.ts` accepts every request in development and requires `Authorization: Bearer $UPLOAD_API_TOKEN` in production. Replace it with your real session lookup before deploying.
 
-### Client-Side (React Hooks)
+## Routes
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/upload/sign?provider=` | Returns a signed upload target (`createSignedUploadHandler`) |
+| `POST /api/upload?provider=` | Receives a multipart upload (`createProxyUploadHandler`) |
+| `GET /api/media/url?provider=&key=` | Returns a short-lived read URL for one of the user's own files |
+
+## Client
 
 ```tsx
 import { useMediaUpload } from '@fluxmedia/react';
 
-export default function UploadComponent() {
-    const { upload, uploading, progress, result } = useMediaUpload({
-        mode: 'proxy',
-        proxyEndpoint: '/api/upload',
-    });
-
-    return (
-        <input 
-            type="file" 
-            onChange={(e) => upload(e.target.files[0])} 
-        />
-    );
-}
-```
-
-### Server-Side (with Plugins)
-
-```typescript
-// lib/uploaders.ts
-import { MediaUploader, createPlugin } from '@fluxmedia/core';
-import { CloudinaryProvider } from '@fluxmedia/cloudinary';
-
-const loggerPlugin = createPlugin('logger', {
-    beforeUpload: async (file, options) => {
-        console.log('Starting upload...');
-        return { file, options };
-    },
-    afterUpload: async (result) => {
-        console.log('Upload complete:', result.url);
-        return result;
-    },
+const { upload, cancel, uploading, progress, result, error } = useMediaUpload({
+  mode: 'signed',
+  signUrlEndpoint: '/api/upload/sign?provider=r2',
+  accept: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSize: 10 * 1024 * 1024,
 });
-
-export async function createUploader() {
-    const uploader = new MediaUploader(
-        new CloudinaryProvider({ ... })
-    );
-    await uploader.use(loggerPlugin);
-    return uploader;
-}
 ```
 
-### API Routes
+## Server
 
-- `POST /api/upload` - Proxy upload (file goes through server)
-- `POST /api/upload/sign` - Get signed Cloudinary URL
-- `POST /api/media/sign` - Get signed S3/R2 URL
+```ts
+// app/api/upload/sign/route.ts
+import { createSignedUploadHandler } from '@fluxmedia/core/server';
 
-## Plugins Included
+export const POST = createSignedUploadHandler(uploader, {
+  authorize: (request) => getUser(request),
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSize: 10 * 1024 * 1024,
+  folder: (user) => `uploads/${user.id}`,
+});
+```
 
-| Plugin     | Description                            |
-| ---------- | -------------------------------------- |
-| Logger     | Logs all upload/delete operations      |
-| Metadata   | Adds uploadedAt timestamp to all files |
-| Validation | Validates file size (max 50MB)         |
-
-## Environment Variables
-
-See `.env.example` for all required credentials.
+Storage CORS must allow `PUT` (S3/R2) or `POST` (Cloudinary) from your origin, with the `Content-Type` header.

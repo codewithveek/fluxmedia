@@ -8,12 +8,20 @@
 import {
   type FluxMediaPlugin,
   type UploadOptions,
+  type UploadInput,
   MediaError,
   MediaErrorCode,
-  UploadInput,
-  getFileType,
+  detectTrustedType,
+  getInputName,
+  getInputSize,
+  isFileInput,
+  isMimeAllowed,
+  isNodeReadable,
+  isStreamInput,
+  isTextLikeMime,
 } from '@fluxmedia/core';
-import { fileToBuffer } from '../utils';
+import { Transform } from 'node:stream';
+import { formatBytes } from '../utils';
 
 /**
  * Validation error types
@@ -33,71 +41,80 @@ export interface ValidationError {
  * Options for the file validation plugin
  */
 export interface FileValidationOptions {
-  /** Allowed MIME types (e.g., ['image/*', 'video/mp4']) */
+  /**
+   * Allowed MIME types (e.g., ['image/*', 'video/mp4']). SVG only matches
+   * when `image/svg+xml` is listed explicitly — `image/*` excludes it
+   * because SVG can contain scripts.
+   */
   allowedTypes?: string[];
-  /** Maximum file size in bytes */
+  /** Maximum file size in bytes. Enforced on streams while they are read. */
   maxSize?: number;
   /** Minimum file size in bytes */
   minSize?: number;
-  /** Allowed file extensions (e.g., ['.jpg', '.png']) */
+  /** Allowed file extensions (e.g., ['.jpg', '.png']); case-insensitive */
   allowedExtensions?: string[];
-  /** Blocked file extensions (e.g., ['.exe', '.bat']) */
+  /** Blocked file extensions (e.g., ['.exe', '.bat']); case-insensitive */
   blockedExtensions?: string[];
   /** Custom validation function */
   customValidator?: (file: UploadInput, filename: string) => Promise<boolean> | boolean;
   /** Callback when validation fails */
   onValidationFailed?: (error: ValidationError) => void;
-  /** Use magic byte detection for MIME type (default: true for Buffer, false for File) */
+  /**
+   * Detect the MIME type from file content (default: true). When false, the
+   * File's declared type or `options.contentType` is trusted — only do that
+   * for input you already trust.
+   */
   useMagicBytes?: boolean;
 }
 
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+function normalizeExt(ext: string): string {
+  const e = ext.trim().toLowerCase();
+  return e ? (e.startsWith('.') ? e : `.${e}`) : '';
+}
 
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+function extOf(name: string | undefined): string {
+  if (!name || !name.includes('.')) return '';
+  return normalizeExt(name.slice(name.lastIndexOf('.')));
 }
 
 /**
- * Get file information from File or Buffer
+ * Wrap a stream so that it fails once more than `maxSize` bytes pass.
  */
-async function getFileInfo(
-  file: UploadInput,
-  options: UploadOptions,
-  useMagicBytes: boolean
-): Promise<{ size: number; name: string; type: string; ext: string }> {
-  // For File instances without magic byte detection, use native File properties
-  if (typeof File !== 'undefined' && file instanceof File && !useMagicBytes) {
-    const name = file.name;
-    const type = file.type || 'application/octet-stream';
-    const ext = name.includes('.') ? '.' + name.split('.').pop()! : '';
-    return { size: file.size, name, type, ext };
+function limitStream(file: UploadInput, maxSize: number): UploadInput {
+  const tooLarge = () =>
+    new MediaError(
+      `File exceeds maximum ${formatBytes(maxSize)}`,
+      MediaErrorCode.FILE_TOO_LARGE,
+      'validation-plugin',
+      undefined,
+      { maxSize }
+    );
+  if (isNodeReadable(file)) {
+    let seen = 0;
+    const limiter = new Transform({
+      transform(chunk: Buffer, _enc, done) {
+        seen += chunk.length;
+        if (seen > maxSize) done(tooLarge());
+        else done(null, chunk);
+      },
+    });
+    file.on('error', (e) => limiter.destroy(e));
+    return file.pipe(limiter);
   }
-
-  const buffer = await fileToBuffer(file);
-  const result = await getFileType(buffer);
-  if (!result) {
-    throw new Error('Invalid file type');
-  }
-  return {
-    size: buffer.length,
-    name: file instanceof File ? file.name : options.filename || 'unknown',
-    type: result.mime,
-    ext: result.ext ? '.' + result.ext : '',
-  };
+  let seen = 0;
+  return (file as ReadableStream<Uint8Array>).pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        seen += chunk.byteLength;
+        if (seen > maxSize) controller.error(tooLarge());
+        else controller.enqueue(chunk);
+      },
+    })
+  );
 }
 
 /**
  * Create a file validation plugin
- *
- * @param options - Validation options
- * @returns FluxMediaPlugin instance
  *
  * @example
  * ```typescript
@@ -105,173 +122,145 @@ async function getFileInfo(
  *   allowedTypes: ['image/*', 'video/mp4'],
  *   maxSize: 10 * 1024 * 1024, // 10MB
  *   blockedExtensions: ['.exe', '.bat'],
- *   useMagicBytes: true, // Use magic byte detection
  * });
  * ```
  */
 export function createFileValidationPlugin(options: FileValidationOptions = {}): FluxMediaPlugin {
-  const useMagicBytes = options.useMagicBytes ?? false;
+  const useMagicBytes = options.useMagicBytes ?? true;
+  const blocked = (options.blockedExtensions ?? []).map(normalizeExt);
+  const allowedExt = (options.allowedExtensions ?? []).map(normalizeExt);
+
+  const fail = (
+    file: UploadInput,
+    type: ValidationErrorType,
+    message: string,
+    code: MediaErrorCode,
+    details?: Record<string, unknown>
+  ): never => {
+    options.onValidationFailed?.({ type, message, file });
+    throw new MediaError(message, code, 'validation-plugin', undefined, details);
+  };
 
   return {
     name: 'file-validation',
-    version: '1.0.0',
+    version: '2.0.0',
     hooks: {
       async beforeUpload(
         file: UploadInput,
         uploadOptions: UploadOptions
       ): Promise<{ file: UploadInput; options: UploadOptions }> {
-        const {
-          size: fileSize,
-          name: fileName,
-          type: fileType,
-          ext: fileExt,
-        } = await getFileInfo(file, uploadOptions, useMagicBytes);
+        const isStream = isStreamInput(file);
+        const fileName = getInputName(file) ?? uploadOptions.filename ?? 'unknown';
+        const fileSize = getInputSize(file);
 
-        // Validate max file size
-        if (options.maxSize && fileSize > options.maxSize) {
-          const error: ValidationError = {
-            type: 'SIZE',
-            message: `File size ${formatBytes(fileSize)} exceeds maximum ${formatBytes(options.maxSize)}`,
-            file,
-          };
-
-          options.onValidationFailed?.(error);
-
-          throw new MediaError(
-            error.message,
-            MediaErrorCode.FILE_TOO_LARGE,
-            'validation-plugin',
-            undefined,
-            { fileSize, maxSize: options.maxSize }
-          );
+        // Determine the type
+        let fileType: string;
+        let detectedExt = '';
+        if (isStream) {
+          fileType = uploadOptions.contentType ?? '';
+        } else if (useMagicBytes) {
+          const trusted = await detectTrustedType(file as File | Buffer, uploadOptions.contentType);
+          fileType = trusted?.mime ?? '';
+          detectedExt = trusted?.detected ? normalizeExt(trusted.ext) : '';
+        } else {
+          fileType = uploadOptions.contentType || (isFileInput(file) ? file.type : '') || '';
         }
 
-        // Validate min file size
-        if (options.minSize && fileSize < options.minSize) {
-          const error: ValidationError = {
-            type: 'SIZE',
-            message: `File size ${formatBytes(fileSize)} is below minimum ${formatBytes(options.minSize)}`,
-            file,
-          };
-
-          options.onValidationFailed?.(error);
-
-          throw new MediaError(
-            error.message,
-            MediaErrorCode.INVALID_FILE_TYPE,
-            'validation-plugin',
-            undefined,
-            { fileSize, minSize: options.minSize }
-          );
-        }
-
-        // Validate file type (MIME type)
-        if (options.allowedTypes && options.allowedTypes.length > 0) {
-          const isAllowed = options.allowedTypes.some((type) => {
-            if (type.endsWith('/*')) {
-              const baseType = type.replace('/*', '');
-              return fileType.startsWith(baseType);
-            }
-            return fileType === type;
-          });
-
-          if (!isAllowed) {
-            const error: ValidationError = {
-              type: 'TYPE',
-              message: `File type "${fileType || 'unknown'}" not allowed. Allowed types: ${options.allowedTypes.join(', ')}`,
+        // Size
+        if (fileSize !== undefined) {
+          if (options.maxSize && fileSize > options.maxSize) {
+            fail(
               file,
-            };
-
-            options.onValidationFailed?.(error);
-
-            throw new MediaError(
-              error.message,
+              'SIZE',
+              `File size ${formatBytes(fileSize)} exceeds maximum ${formatBytes(options.maxSize)}`,
+              MediaErrorCode.FILE_TOO_LARGE,
+              { fileSize, maxSize: options.maxSize }
+            );
+          }
+          if (options.minSize && fileSize < options.minSize) {
+            fail(
+              file,
+              'SIZE',
+              `File size ${formatBytes(fileSize)} is below minimum ${formatBytes(options.minSize)}`,
               MediaErrorCode.INVALID_FILE_TYPE,
-              'validation-plugin',
-              undefined,
-              { fileType, allowedTypes: options.allowedTypes }
+              { fileSize, minSize: options.minSize }
             );
           }
         }
 
-        // Validate blocked extensions
-        if (options.blockedExtensions && options.blockedExtensions.includes(fileExt)) {
-          const error: ValidationError = {
-            type: 'EXTENSION',
-            message: `File extension "${fileExt}" is blocked`,
-            file,
-          };
-
-          options.onValidationFailed?.(error);
-
-          throw new MediaError(
-            error.message,
-            MediaErrorCode.INVALID_FILE_TYPE,
-            'validation-plugin',
-            undefined,
-            { extension: fileExt, blockedExtensions: options.blockedExtensions }
-          );
+        // Type
+        if (options.allowedTypes?.length) {
+          if (!fileType || !isMimeAllowed(fileType, options.allowedTypes)) {
+            const reason = isStream && !fileType ? ' (set contentType for streams)' : '';
+            fail(
+              file,
+              'TYPE',
+              `File type "${fileType || 'unknown'}" not allowed${reason}. Allowed types: ${options.allowedTypes.join(', ')}`,
+              MediaErrorCode.INVALID_FILE_TYPE,
+              { fileType, allowedTypes: options.allowedTypes }
+            );
+          }
+        } else if (useMagicBytes && !isStream && !fileType) {
+          // Without an allow-list, still refuse content that claims a type it is not
+          const declared = uploadOptions.contentType || (isFileInput(file) ? file.type : '');
+          if (declared && !isTextLikeMime(declared) && declared !== 'application/octet-stream') {
+            fail(
+              file,
+              'TYPE',
+              `File content does not match its declared type "${declared}"`,
+              MediaErrorCode.INVALID_FILE_TYPE,
+              { declared }
+            );
+          }
         }
 
-        // Validate allowed extensions
-        if (options.allowedExtensions && options.allowedExtensions.length > 0) {
-          if (!options.allowedExtensions.includes(fileExt)) {
-            const error: ValidationError = {
-              type: 'EXTENSION',
-              message: `File extension "${fileExt}" not allowed. Allowed: ${options.allowedExtensions.join(', ')}`,
+        // Extensions: check both the filename and the detected type
+        const nameExt = extOf(getInputName(file) ?? uploadOptions.filename);
+        const exts = [...new Set([nameExt, detectedExt].filter(Boolean))];
+        const blockedHit = exts.find((e) => blocked.includes(e));
+        if (blockedHit) {
+          fail(file, 'EXTENSION', `File extension "${blockedHit}" is blocked`, MediaErrorCode.INVALID_FILE_TYPE, {
+            extension: blockedHit,
+            blockedExtensions: options.blockedExtensions,
+          });
+        }
+        if (allowedExt.length) {
+          const ext = nameExt || detectedExt;
+          if (!ext || !allowedExt.includes(ext)) {
+            fail(
               file,
-            };
-
-            options.onValidationFailed?.(error);
-
-            throw new MediaError(
-              error.message,
+              'EXTENSION',
+              `File extension "${ext}" not allowed. Allowed: ${options.allowedExtensions!.join(', ')}`,
               MediaErrorCode.INVALID_FILE_TYPE,
-              'validation-plugin',
-              undefined,
-              { extension: fileExt, allowedExtensions: options.allowedExtensions }
+              { extension: ext, allowedExtensions: options.allowedExtensions }
             );
           }
         }
 
         // Custom validation
-        if (options.customValidator) {
-          const isValid = await options.customValidator(file, fileName);
-
-          if (!isValid) {
-            const error: ValidationError = {
-              type: 'CUSTOM',
-              message: 'File failed custom validation',
-              file,
-            };
-
-            options.onValidationFailed?.(error);
-
-            throw new MediaError(
-              error.message,
-              MediaErrorCode.INVALID_FILE_TYPE,
-              'validation-plugin'
-            );
-          }
+        if (options.customValidator && !(await options.customValidator(file, fileName))) {
+          fail(file, 'CUSTOM', 'File failed custom validation', MediaErrorCode.INVALID_FILE_TYPE);
         }
 
-        // Add validation metadata to options
-        const enrichedOptions: UploadOptions = {
-          ...uploadOptions,
-          metadata: {
-            ...uploadOptions.metadata,
-            validation: {
-              fileSize,
-              fileName,
-              fileType,
-              fileExt,
-              validated: true,
-              timestamp: new Date().toISOString(),
+        const outFile = isStream && options.maxSize ? limitStream(file, options.maxSize) : file;
+        return {
+          file: outFile,
+          options: {
+            ...uploadOptions,
+            ...(fileType && { contentType: fileType }),
+            metadata: {
+              ...uploadOptions.metadata,
+              validation: {
+                fileSize,
+                fileName,
+                fileType,
+                fileExt: nameExt || detectedExt,
+                validated: true,
+                timestamp: new Date().toISOString(),
+              },
             },
           },
         };
-
-        return { file, options: enrichedOptions };
       },
     },
   };

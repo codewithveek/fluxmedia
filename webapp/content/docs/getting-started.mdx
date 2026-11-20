@@ -18,6 +18,29 @@ Install only what you need:
 # Core (required)
 pnpm add @fluxmedia/core
 
+# Pick a provider (each needs its SDK as a peer dependency)
+pnpm add @fluxmedia/cloudinary cloudinary                                  # Transformations
+pnpm add @fluxmedia/s3 @aws-sdk/client-s3 @aws-sdk/lib-storage            # AWS S3 / S3-compatible
+pnpm add @fluxmedia/r2 @aws-sdk/client-s3 @aws-sdk/lib-storage            # Cloudflare R2
+pnpm add @fluxmedia/gcs @google-cloud/storage                             # Google Cloud Storage
+pnpm add @fluxmedia/azure @azure/storage-blob                             # Azure Blob Storage
+pnpm add @fluxmedia/local                                                 # Local filesystem
+
+# Signed URLs on S3/R2
+pnpm add @aws-sdk/s3-request-presigner
+
+# Optional: Official plugins
+pnpm add @fluxmedia/plugins
+
+# Optional: React integration
+pnpm add @fluxmedia/react
+```
+
+For tests and local development, `MemoryProvider` from `@fluxmedia/core` needs no setup.
+
+# Core (required)
+pnpm add @fluxmedia/core
+
 # Pick a provider
 pnpm add @fluxmedia/cloudinary  # Full featured with transformations
 pnpm add @fluxmedia/s3          # AWS S3
@@ -54,10 +77,12 @@ const result = await uploader.upload(fileBuffer, {
 });
 
 console.log(result.url); // https://res.cloudinary.com/...
-console.log(result.id); // user-avatars/avatar-123
+console.log(result.id); // user-avatars/avatar-123-x1y2z3a4 (random suffix; uniqueFilename: false to keep the exact name)
 console.log(result.storageKey); // Provider-specific storage key
 console.log(result.format); // jpg
 ```
+
+Folders and filenames are sanitized, and only top-level string, number and boolean `metadata` values are stored with the file.
 
 ### Streaming Uploads
 
@@ -70,25 +95,32 @@ import { createReadStream } from 'fs';
 const stream = createReadStream('/path/to/large-file.mp4');
 const result = await uploader.upload(stream, {
   folder: 'videos',
-  contentType: 'video/mp4',
+  contentType: 'video/mp4', // streams cannot be sniffed, so set the type
 });
 
 // Upload from web ReadableStream
 const response = await fetch('https://example.com/image.jpg');
 const result = await uploader.upload(response.body!, {
   folder: 'imports',
+  contentType: response.headers.get('content-type') ?? 'application/octet-stream',
 });
 ```
 
+A stream can only be read once, so stream uploads are never retried or sent to a fallback provider.
+
 ### With React
+
+The browser asks your server for a signed upload target, then uploads straight to storage:
 
 ```tsx
 import { useMediaUpload } from '@fluxmedia/react';
 
 function UploadButton() {
-  const { upload, uploading, progress, result, error } = useMediaUpload({
+  const { upload, cancel, uploading, progress, result, error } = useMediaUpload({
     mode: 'signed',
     signUrlEndpoint: '/api/upload/sign',
+    accept: ['image/*'],
+    maxSize: 10 * 1024 * 1024,
   });
 
   return (
@@ -103,6 +135,22 @@ function UploadButton() {
   );
 }
 ```
+
+The endpoint is one handler:
+
+```typescript
+// app/api/upload/sign/route.ts
+import { createSignedUploadHandler } from '@fluxmedia/core/server';
+
+export const POST = createSignedUploadHandler(uploader, {
+  authorize: (request) => getSessionUser(request),
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSize: 10 * 1024 * 1024,
+  folder: (user) => `users/${user.id}`,
+});
+```
+
+See [Secure Uploads](/docs/secure-uploads) for the proxy alternative and the security checklist.
 
 ## Using Multiple Providers
 
@@ -147,14 +195,17 @@ const uploader = new MediaUploader(
       MediaErrorCode.RATE_LIMITED,
       MediaErrorCode.PROVIDER_ERROR,
     ],
-    onFallback: (error, fallback) => {
-      console.warn(`Using ${fallback.name} due to: ${error.message}`);
+    onFallback: (error, fromProvider, toProvider) => {
+      console.warn(`Using ${toProvider} instead of ${fromProvider}: ${error.message}`);
     },
   }
 );
 
 // If Cloudinary fails with a qualifying error, S3 is used automatically
 const result = await uploader.upload(file, { folder: 'uploads' });
+
+// Pass the result (not just the ID) so later calls go to the provider that stored it
+await uploader.delete(result);
 ```
 
 ## Upload with Abort
@@ -206,9 +257,21 @@ if (uploader.supports('capabilities.videoProcessing')) {
 }
 ```
 
+## Private Files
+
+Leave the public URL off and hand out short-lived links:
+
+```typescript
+const result = await uploader.upload(file);
+const url = await uploader.getSignedUrl(result, { expiresIn: 300 });
+```
+
+Each provider page explains how to make storage private (for example `publicUrl: false` on S3, or no `publicUrl` on R2).
+
 ## Next Steps
 
-- [Providers](/docs/providers) - Configure Cloudinary, S3, R2
-- [Plugins](/docs/plugins) - Extend with validation, analytics, retry, and more
+- [Providers](/docs/providers) - Configure Cloudinary, S3, R2, GCS, Azure or the local filesystem
+- [Secure Uploads](/docs/secure-uploads) - Browser uploads, private files and signed URLs
+- [Plugins](/docs/plugins) - Validation, optimization, virus scanning, dedupe, retry, and more
 - [React Integration](/docs/react) - Hooks and components
 - [API Reference](/docs/api) - Full API documentation

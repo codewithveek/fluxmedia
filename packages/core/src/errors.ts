@@ -25,6 +25,22 @@ export enum MediaErrorCode {
   // File errors
   FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   DELETE_FAILED = 'DELETE_FAILED',
+
+  // Operation errors
+  /** The operation was cancelled through an AbortSignal. Never retried. */
+  ABORTED = 'ABORTED',
+  /** The provider does not implement this operation. */
+  NOT_SUPPORTED = 'NOT_SUPPORTED',
+}
+
+/**
+ * True when an error represents a cancelled operation (MediaError ABORTED or
+ * a DOM/Node AbortError).
+ */
+export function isAbortError(error: unknown): boolean {
+  if (error instanceof MediaError) return error.code === MediaErrorCode.ABORTED;
+  const name = (error as { name?: unknown } | null)?.name;
+  return name === 'AbortError';
 }
 
 /**

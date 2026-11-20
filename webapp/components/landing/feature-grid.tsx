@@ -12,7 +12,7 @@ const featureGroups = [
         index: '01',
         title: 'Unified interface',
         description:
-          'Cloudinary, S3, and R2 share one upload contract. Swap providers without rewriting call sites.',
+          'Cloudinary, S3, R2, Google Cloud, Azure and local disk share one upload contract. Swap providers without rewriting call sites.',
         code: true,
       },
       {
@@ -36,13 +36,13 @@ const featureGroups = [
         index: '04',
         title: 'Plugin pipeline',
         description:
-          'Validation, optimization, metadata, analytics, and retry attach in a predictable order.',
+          'Validation, optimization, virus scanning, dedupe, metadata, analytics, and retry attach in a predictable order.',
       },
       {
         index: '05',
         title: 'React hooks',
         description:
-          'Upload state, progress, and errors surfaced for UI without reimplementing event wiring.',
+          'Upload state, progress, cancel, queues, and drag-and-drop without reimplementing event wiring.',
       },
       {
         index: '06',
@@ -59,13 +59,19 @@ const featureGroups = [
         index: '07',
         title: 'Transforms when available',
         description:
-          'Resize, format, and quality paths on Cloudinary. S3 and R2 stay lean by design.',
+          'Resize, format, and quality paths on Cloudinary. Storage providers stay lean by design.',
       },
       {
         index: '08',
         title: 'Compile-time config',
         description:
           'Catch bucket names, regions, and option shapes before deploy, not in production logs.',
+      },
+      {
+        index: '09',
+        title: 'Secure by default',
+        description:
+          'Upload handlers check auth, type, and size on the server. Private files get short-lived signed URLs.',
       },
     ],
   },

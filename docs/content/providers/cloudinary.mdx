@@ -26,12 +26,16 @@ const uploader = new MediaUploader(
 
 ### Configuration Options
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `cloudName` | string | Yes | Your Cloudinary cloud name |
-| `apiKey` | string | Yes | API key from dashboard |
-| `apiSecret` | string | Yes | API secret (keep secure!) |
-| `secure` | boolean | No | Use HTTPS URLs (default: true) |
+| Option               | Type    | Required | Description                                                         |
+| -------------------- | ------- | -------- | ------------------------------------------------------------------- |
+| `cloudName`          | string  | Yes      | Your Cloudinary cloud name                                          |
+| `apiKey`             | string  | Yes      | API key from dashboard                                              |
+| `apiSecret`          | string  | Yes      | API secret (keep secure!)                                           |
+| `secure`             | boolean | No       | Use HTTPS URLs (default: true)                                      |
+| `authTokenKey`       | string  | No       | Token-based auth key: expiring URLs for private assets, with transformations |
+| `secureDistribution` | string  | No       | Custom delivery domain (CNAME / private CDN)                        |
+
+Credentials are sent with each request rather than through the global `cloudinary.config()`, so providers for different accounts can run in one process.
 
 ## Upload with Transformations
 
@@ -83,15 +87,39 @@ const results = await uploader.uploadMultiple(files, {
 ## Delete Files
 
 ```typescript
-// Delete image
-await uploader.delete(imageId);
+// Pass the upload result: the provider knows the resource type (image, video, raw)
+await uploader.delete(result);
 
-// Delete video (specify resource type)
-await uploader.delete(videoId, { resourceType: 'video' });
+// With only an ID, give the resource type, or the provider tries image, video and raw in turn
+await uploader.delete(videoId, { metadata: { resourceType: 'video' } });
 
 // Delete multiple
 await uploader.deleteMultiple(['id1', 'id2', 'id3']);
 ```
+
+## Private Assets and Signed URLs
+
+```typescript
+// Stored as "authenticated": no public URL, readable only through signed URLs
+const result = await uploader.upload(file, { public: false });
+
+const url = await uploader.getSignedUrl(result, { expiresIn: 600 });
+```
+
+For private assets, signed URLs use Cloudinary's private download API (original file, real expiry), or, with `authTokenKey`, token-authenticated delivery URLs that also support transformations. Public assets are readable by anyone, so `getSignedUrl` returns their normal URL. Pass the `UploadResult` to skip an Admin API lookup.
+
+## Direct Browser Uploads
+
+`createUploadUrl` returns signed form fields for a `POST` to the Cloudinary upload API. The signature fixes the public ID, tags, context, delivery type and allowed formats; it cannot cap the file size, so use an upload preset with limits (or the proxy handler) when size matters. See [Secure Uploads](/secure-uploads).
+
+## Listing and Search
+
+```typescript
+const page = await uploader.list({ folder: 'products', limit: 50 });
+const results = await uploader.search({ query: 'shoe', tags: ['summer'] });
+```
+
+Both use the Search API, which indexes new uploads asynchronously. `copy`, `move` (rename), `download`, `exists` and `updateMetadata` (context) are also supported.
 
 ## Supported Features
 
@@ -103,25 +131,28 @@ uploader.supports('transformations.quality')  // true
 uploader.supports('transformations.blur')     // true
 uploader.supports('capabilities.aiTagging')   // true
 uploader.supports('capabilities.videoProcessing') // true
+uploader.supports('capabilities.signedUrls')  // true
+uploader.supports('capabilities.search')      // true
 ```
 
 ## Native SDK Access
 
-Access the full Cloudinary SDK for advanced operations:
+Access the full Cloudinary SDK for advanced operations. The global config is not set, so pass credentials with each call:
 
 ```typescript
-const cloudinary = uploader.provider.native;
+const cloudinary = uploader.provider.native; // null until the first request
 
-// Use native Cloudinary SDK features
+const credentials = {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+};
+
 await cloudinary.uploader.explicit('sample', {
+  ...credentials,
   type: 'upload',
-  eager: [{ effect: 'sepia' }]
+  eager: [{ effect: 'sepia' }],
 });
-
-// Search API
-const results = await cloudinary.search
-  .expression('folder:products')
-  .execute();
 ```
 
 ## Environment Variables

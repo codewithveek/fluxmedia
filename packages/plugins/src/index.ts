@@ -50,3 +50,28 @@ export {
     type RetryOptions,
     type RetryMetadata,
 } from './retry';
+
+// Virus Scanning Plugin
+export {
+    createVirusScanPlugin,
+    createClamAVScanner,
+    type VirusScanOptions,
+    type VirusScanner,
+    type ScanResult,
+    type ClamAVOptions,
+} from './virus-scan';
+
+// Deduplication Plugin
+export {
+    createDeduplicationPlugin,
+    createMemoryDedupeStore,
+    type DedupeOptions,
+    type DedupeStore,
+} from './dedupe';
+
+// Placeholder (LQIP) Plugin
+export {
+    createPlaceholderPlugin,
+    type PlaceholderOptions,
+    type PlaceholderMetadata,
+} from './placeholder';

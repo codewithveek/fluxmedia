@@ -55,20 +55,45 @@ interface CloudinaryConfig {
   apiKey: string;      // API key from dashboard
   apiSecret: string;   // API secret (keep secure!)
   secure?: boolean;    // Use HTTPS (default: true)
+  authTokenKey?: string; // Token-based auth key: expiring URLs with transformations
+  secureDistribution?: string; // Custom delivery domain (CNAME / private CDN)
 }
 ```
+
+Credentials are sent with each request instead of through the global `cloudinary.config()`, so several providers for different accounts can run in one process.
+
+## Private Assets and Signed URLs
+
+```typescript
+// Stored as "authenticated": no public URL, readable only through signed URLs
+const result = await uploader.upload(file, { public: false });
+
+// Expiring link. Pass the result so the provider knows the resource type.
+const url = await uploader.getSignedUrl(result, { expiresIn: 600 });
+```
+
+For `authenticated` assets, signed URLs use Cloudinary's private download API (original file, real expiry), or, with `authTokenKey` (Advanced plans), token-authenticated delivery URLs that also support `transform`. Public (`upload`) assets are readable by anyone, so `getSignedUrl` returns their normal delivery URL. Pass the `UploadResult` to avoid an Admin API lookup of the asset's type and format.
+
+`createUploadUrl()` returns signed form fields for a direct browser upload. The signature fixes the public ID, tags, context, delivery type and allowed formats; it cannot cap the file size, so use an upload preset with limits (or the proxy handler) when size matters.
+
+## Videos, Raw Files and Deletes
+
+Pass the `UploadResult` (or `{ metadata: { resourceType: 'video' } }`) to `delete`, `get`, `getUrl` and `move` so the right resource type is used. With only an ID, the provider tries image, video and raw in turn.
 
 ## Advanced Usage
 
 ### Access Native Cloudinary Client
 
 ```typescript
-const cloudinary = uploader.provider.native;
+const cloudinary = uploader.provider.native; // null until the first request
 
-// Use Cloudinary-specific features
+// The global config is not set; pass credentials with each call
 await cloudinary.uploader.explicit('sample', {
+  cloud_name: 'my-cloud',
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
   type: 'upload',
-  eager: [{ effect: 'sepia' }]
+  eager: [{ effect: 'sepia' }],
 });
 ```
 
@@ -135,34 +160,24 @@ const results = await uploader.uploadMultiple(files, {
 ## Delete Files
 
 ```typescript
-// Delete single file
-await uploader.delete(result.id);
+// Pass the upload result so the resource type (image, video, raw) is known
+await uploader.delete(result);
 
-// Delete with resource type
-await uploader.delete(videoId, { resourceType: 'video' });
+// With only an ID, give the resource type (otherwise image, video and raw are tried in turn)
+await uploader.delete(videoId, { metadata: { resourceType: 'video' } });
 
 // Delete multiple files
 await uploader.deleteMultiple(['id1', 'id2', 'id3']);
 ```
 
-## Native SDK Access
-
-Access the full Cloudinary SDK for advanced operations:
+## Search
 
 ```typescript
-const cloudinary = uploader.provider.native;
-
-// Use native Cloudinary features
-await cloudinary.uploader.explicit('sample', {
-  type: 'upload',
-  eager: [{ effect: 'sepia' }]
-});
-
-// Search API
-const searchResult = await cloudinary.search
-  .expression('folder:products')
-  .execute();
+const results = await uploader.search({ query: 'shoe', folder: 'products', tags: ['summer'] });
+const page = await uploader.list({ folder: 'products', limit: 50 });
 ```
+
+Both use the Search API, which indexes new uploads asynchronously. For native SDK access, see [Advanced Usage](#advanced-usage).
 
 ## Check Feature Support
 

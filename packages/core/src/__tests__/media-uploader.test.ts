@@ -136,18 +136,38 @@ describe('MediaUploader', () => {
   });
 
   describe('deleteMultiple', () => {
-    it('should delete each file individually (for plugin support)', async () => {
+    it('should batch plain IDs through the provider and run hooks for each', async () => {
       const mockProvider = new MockProvider();
-      mockProvider.delete.mockResolvedValue();
+      mockProvider.deleteMultiple.mockResolvedValue();
+      const beforeDelete = vi.fn(async (id: string) => id);
+      const afterDelete = vi.fn(async () => undefined);
 
-      const uploader = new MediaUploader(mockProvider);
-      const ids = ['id1', 'id2', 'id3'];
-      await uploader.deleteMultiple(ids);
+      const uploader = new MediaUploader(mockProvider, [
+        { name: 'hooks', hooks: { beforeDelete, afterDelete } },
+      ]);
+      await uploader.deleteMultiple(['id1', 'id2', 'id3']);
 
-      expect(mockProvider.delete).toHaveBeenCalledTimes(3);
-      expect(mockProvider.delete).toHaveBeenNthCalledWith(1, 'id1');
-      expect(mockProvider.delete).toHaveBeenNthCalledWith(2, 'id2');
-      expect(mockProvider.delete).toHaveBeenNthCalledWith(3, 'id3');
+      expect(mockProvider.deleteMultiple).toHaveBeenCalledWith(['id1', 'id2', 'id3']);
+      expect(beforeDelete).toHaveBeenCalledTimes(3);
+      expect(afterDelete).toHaveBeenCalledTimes(3);
+    });
+
+    it('should report only the IDs the provider failed to delete', async () => {
+      const mockProvider = new MockProvider();
+      mockProvider.deleteMultiple.mockRejectedValue(
+        new MediaError('partial', MediaErrorCode.DELETE_FAILED, 'mock', undefined, {
+          failedIds: ['id2'],
+        })
+      );
+      const afterDelete = vi.fn(async () => undefined);
+      const uploader = new MediaUploader(mockProvider, [{ name: 'h', hooks: { afterDelete } }]);
+
+      const error = await uploader.deleteMultiple(['id1', 'id2']).catch((e) => e);
+
+      expect(error).toBeInstanceOf(MediaError);
+      expect(error.details.failedIds).toEqual(['id2']);
+      expect(afterDelete).toHaveBeenCalledWith('id1');
+      expect(afterDelete).not.toHaveBeenCalledWith('id2');
     });
   });
 
@@ -171,7 +191,10 @@ describe('MediaUploader', () => {
 
       const uploader = new MediaUploader(mockProvider);
 
-      await expect(uploader.search({})).rejects.toThrow('Search is not supported by mock provider');
+      await expect(uploader.search({})).rejects.toMatchObject({
+        code: MediaErrorCode.NOT_SUPPORTED,
+        message: 'search is not supported by the mock provider',
+      });
     });
   });
 
@@ -274,7 +297,7 @@ describe('MediaUploader', () => {
         )
       ).rejects.toThrow('commit fail');
 
-      expect(mockProvider.delete).toHaveBeenCalledWith('test-id');
+      expect(mockProvider.delete).toHaveBeenCalledWith('test-id', { metadata: {} });
     });
 
     it('should not attempt default rollback when storageKey is absent', async () => {

@@ -9,11 +9,14 @@ export default function Home() {
   const [mode, setMode] = useState<UploadMode>('signed');
   const [provider, setProvider] = useState<ProviderType>('cloudinary');
 
-  const { upload, uploading, progress, result, error, reset } = useMediaUpload({
+  const { upload, cancel, uploading, progress, result, error, reset } = useMediaUpload({
     mode,
-    signUrlEndpoint: '/api/upload/sign',
-    proxyEndpoint: '/api/upload',
-    // Pass provider as form data for proxy mode
+    // The server decides folder and limits; the provider is chosen per route
+    signUrlEndpoint: `/api/upload/sign?provider=${provider}`,
+    proxyEndpoint: `/api/upload?provider=${provider}`,
+    // Client-side checks for fast feedback (the server enforces them too)
+    accept: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    maxSize: 10 * 1024 * 1024,
     onUploadComplete: (result) => {
       console.log('Upload complete:', result);
     },
@@ -27,12 +30,8 @@ export default function Home() {
     if (!file) return;
 
     try {
-      // Pass selected provider to the upload API
-      await upload(file, {
-        folder: 'nextjs-demo',
-        provider,
-      });
-    } catch (err) {
+      await upload(file);
+    } catch {
       // Error is handled by onUploadError
     }
   };
@@ -116,9 +115,14 @@ export default function Home() {
           </label>
 
           {uploading && (
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-            </div>
+            <>
+              <div className="progress-bar">
+                <div className="progress-bar-fill" style={{ transform: `scaleX(${progress / 100})` }} />
+              </div>
+              <button className="mode-tab" onClick={cancel}>
+                Cancel
+              </button>
+            </>
           )}
         </div>
 
@@ -127,8 +131,15 @@ export default function Home() {
         {result && (
           <div className="result">
             <strong>Upload Complete!</strong>
-            <div className="url-display">{result.url}</div>
-            <img src={result.url} alt="Uploaded" />
+            <div className="url-display">{result.publicUrl ?? result.storageKey}</div>
+            {result.publicUrl ? (
+              <img src={result.publicUrl} alt="Uploaded" />
+            ) : (
+              <p style={{ color: '#888', fontSize: '0.875rem' }}>
+                Stored privately. Fetch a short-lived link from{' '}
+                <code>/api/media/url?provider={provider}&amp;key=…</code>
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -149,8 +160,12 @@ export default function Home() {
             <span>Adds uploadedAt timestamp and source to all uploads</span>
           </div>
           <div className="plugin-item">
-            <strong>Validation Plugin</strong>
-            <span>Validates file size (max 50MB)</span>
+            <strong>Retry Plugin</strong>
+            <span>Retries network and rate-limit failures with backoff</span>
+          </div>
+          <div className="plugin-item">
+            <strong>Upload handlers</strong>
+            <span>Authenticate, check type by content and size, and pick the folder on the server</span>
           </div>
         </div>
       </div>

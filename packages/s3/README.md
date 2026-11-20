@@ -18,39 +18,67 @@ const uploader = new MediaUploader(
   new S3Provider({
     region: 'us-east-1',
     bucket: 'my-bucket',
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    // Optional: without keys the AWS default credential chain is used
+    // (IAM roles, ECS/EKS task roles, SSO, env vars, ~/.aws).
   })
 );
 
-// Upload a file
-const result = await uploader.upload(file, {
-  folder: 'uploads',
-  filename: 'my-file.jpg'
-});
+const result = await uploader.upload(file, { folder: 'uploads', filename: 'photo' });
 
 console.log(result.url);
-// https://my-bucket.s3.us-east-1.amazonaws.com/uploads/my-file.jpg
+// https://my-bucket.s3.us-east-1.amazonaws.com/uploads/photo-x1y2z3a4
 ```
 
 ## Features
 
-- **Automatic multipart uploads** for files >5MB
+- **Automatic multipart uploads** for files >5MB, cancellable with `signal`
 - **Progress tracking** for individual and batch uploads
-- **Batch operations** with concurrency control
-- **S3-compatible** - works with MinIO, DigitalOcean Spaces, etc.
+- **Batch deletes** with `DeleteObjects` (1000 keys per request)
+- **Signed URLs** for downloads and direct browser uploads
+- **List, copy, move, download, metadata updates**
+- **S3-compatible** - MinIO, Backblaze B2, Wasabi, DigitalOcean Spaces, Supabase Storage, …
 
 ## Configuration
 
 ```typescript
 interface S3Config {
-  region: string;           // AWS region (e.g., 'us-east-1')
-  bucket: string;           // S3 bucket name
-  accessKeyId: string;      // AWS Access Key
-  secretAccessKey: string;  // AWS Secret Key
-  endpoint?: string;        // Custom endpoint for S3-compatible services
-  forcePathStyle?: boolean; // Use path-style URLs
+  region?: string;          // Required unless you pass `client`
+  bucket: string;
+  accessKeyId?: string;     // Optional: default credential chain otherwise
+  secretAccessKey?: string;
+  sessionToken?: string;    // Temporary (STS) credentials
+  credentials?: AwsCredentialIdentity | AwsCredentialIdentityProvider;
+  client?: S3Client;        // Bring your own client
+  clientConfig?: Partial<S3ClientConfig>;
+  endpoint?: string;        // S3-compatible services
+  forcePathStyle?: boolean;
+  publicUrl?: string | false; // CDN base URL (CloudFront), or false for a private bucket
+  useAcl?: boolean;         // Apply `public` as an object ACL (ACL-enabled buckets only)
+  appendExtension?: boolean; // 'photo-x1y2.png' instead of 'photo-x1y2'
+  multipart?: { partSize?: number; queueSize?: number };
 }
+```
+
+## Private Buckets and Signed URLs
+
+```typescript
+const provider = new S3Provider({ region: 'us-east-1', bucket: 'private-bucket', publicUrl: false });
+const uploader = new MediaUploader(provider);
+
+const result = await uploader.upload(file);    // result.publicUrl is undefined
+const url = await uploader.getSignedUrl(result, { expiresIn: 300, downloadAs: 'report.pdf' });
+
+// Direct browser upload: the content type and exact size are signed
+const target = await uploader.createUploadUrl({ contentType: 'image/png', size: 48213, folder: 'users/1' });
+// → { uploadUrl, method: 'PUT', headers: { 'Content-Type': 'image/png' }, storageKey, expiresAt }
+```
+
+Use `createSignedUploadHandler` from `@fluxmedia/core/server` to expose `createUploadUrl` safely. Signed URLs need `@aws-sdk/s3-request-presigner`.
+
+## CloudFront
+
+```typescript
+new S3Provider({ region: 'us-east-1', bucket: 'media', publicUrl: 'https://d111111abcdef8.cloudfront.net' });
 ```
 
 ## Upload with Progress
@@ -93,7 +121,7 @@ await uploader.deleteMultiple(['file1', 'file2', 'file3']);
 Access the underlying AWS S3 client for advanced operations:
 
 ```typescript
-const s3Client = uploader.provider.native;
+const s3Client = await (uploader.provider as S3Provider).getClient();
 
 // Use native AWS SDK methods
 const { ListBucketsCommand } = await import('@aws-sdk/client-s3');
@@ -127,6 +155,25 @@ const uploader = new MediaUploader(
     forcePathStyle: true
   })
 );
+
+// Backblaze B2
+new S3Provider({
+  region: 'us-west-004',
+  bucket: 'my-bucket',
+  accessKeyId: process.env.B2_KEY_ID,
+  secretAccessKey: process.env.B2_APPLICATION_KEY,
+  endpoint: 'https://s3.us-west-004.backblazeb2.com',
+});
+
+// Supabase Storage (S3 protocol)
+new S3Provider({
+  region: 'us-east-1',
+  bucket: 'media',
+  accessKeyId: process.env.SUPABASE_S3_KEY_ID,
+  secretAccessKey: process.env.SUPABASE_S3_SECRET,
+  endpoint: 'https://<project-ref>.supabase.co/storage/v1/s3',
+  forcePathStyle: true,
+});
 ```
 
 ## Environment Variables

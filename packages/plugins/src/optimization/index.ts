@@ -5,8 +5,9 @@
  * Requires sharp as a peer dependency.
  */
 
-import { UploadInput, type FluxMediaPlugin, type UploadOptions } from '@fluxmedia/core';
-import { fileToBuffer, isImageFile, isSvgFile } from '../utils';
+import type { FluxMediaPlugin, UploadInput, UploadOptions } from '@fluxmedia/core';
+import { isFileInput } from '@fluxmedia/core';
+import { fileToBuffer, isInspectable, isRasterImage } from '../utils';
 
 /**
  * Options for the image optimization plugin
@@ -18,14 +19,25 @@ export interface ImageOptimizationOptions {
   maxHeight?: number;
   /** Quality 0-1 for lossy formats (default: 0.85) */
   quality?: number;
-  /** Output format: 'auto', 'webp', 'avif', 'jpeg', 'png' (default: 'auto') */
+  /** Output format: 'auto' (WebP), 'webp', 'avif', 'jpeg', 'png' (default: 'auto') */
   format?: 'auto' | 'webp' | 'avif' | 'jpeg' | 'png';
-  /** Strip EXIF and other metadata (default: true) */
+  /**
+   * Strip EXIF (including GPS location) and other metadata (default: true).
+   * sharp drops metadata unless told to keep it.
+   */
   stripMetadata?: boolean;
   /** Auto-orient based on EXIF (default: true) */
   autoOrient?: boolean;
   /** Preserve aspect ratio when resizing (default: true) */
   preserveAspectRatio?: boolean;
+  /**
+   * Keep the original when re-encoding would make it larger and no resize
+   * was needed (default: true). Ignored when `stripMetadata` is true and
+   * the original has EXIF data, so location data is never kept by accident.
+   */
+  skipIfLarger?: boolean;
+  /** Refuse to decode images with more pixels than this (default: 100 megapixels). */
+  maxInputPixels?: number;
 }
 
 /**
@@ -39,6 +51,7 @@ export interface OptimizationMetadata {
   format: string;
   quality: number;
   resized: boolean;
+  skipped?: boolean;
   dimensions?:
     | {
         original: { width: number; height: number };
@@ -47,13 +60,16 @@ export interface OptimizationMetadata {
     | undefined;
 }
 
-
+const MIME: Record<string, string> = {
+  webp: 'image/webp',
+  avif: 'image/avif',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+};
 
 /**
- * Create an image optimization plugin (server-side)
- *
- * @param options - Optimization options
- * @returns FluxMediaPlugin instance
+ * Create an image optimization plugin (server-side). Works with Buffers and
+ * Files; streams are passed through untouched.
  *
  * @example
  * ```typescript
@@ -71,11 +87,13 @@ export function createImageOptimizationPlugin(
   const config = {
     maxWidth: options.maxWidth ?? 2000,
     maxHeight: options.maxHeight ?? 2000,
-    quality: options.quality ?? 0.85,
+    quality: Math.min(Math.max(options.quality ?? 0.85, 0.01), 1),
     format: options.format ?? 'auto',
     stripMetadata: options.stripMetadata ?? true,
     autoOrient: options.autoOrient ?? true,
     preserveAspectRatio: options.preserveAspectRatio ?? true,
+    skipIfLarger: options.skipIfLarger ?? true,
+    maxInputPixels: options.maxInputPixels ?? 100_000_000,
   };
 
   return {
@@ -86,43 +104,25 @@ export function createImageOptimizationPlugin(
         file: UploadInput,
         uploadOptions: UploadOptions
       ): Promise<{ file: UploadInput; options: UploadOptions } | void> {
-        // Only process images
-        if (!isImageFile(file)) {
-          return { file, options: uploadOptions };
-        }
-
-        // Skip SVG (vector format, doesn't need optimization)
-        if (isSvgFile(file)) {
+        // Only raster images that can be read without consuming a stream (SVG excluded)
+        if (!isInspectable(file) || !(await isRasterImage(file))) {
           return { file, options: uploadOptions };
         }
 
         try {
           // Lazy load sharp (peer dependency)
           const sharp = (await import('sharp')).default;
-
-          const originalSize =
-            typeof File !== 'undefined' && file instanceof File
-              ? file.size
-              : (file as Buffer).length;
-
-          // Convert to buffer
           const buffer = await fileToBuffer(file);
+          const originalSize = buffer.byteLength;
 
-          // Create sharp instance
-          let image = sharp(buffer);
+          let image = sharp(buffer, { limitInputPixels: config.maxInputPixels });
+          if (config.autoOrient) image = image.rotate();
 
-          // Auto-orient based on EXIF
-          if (config.autoOrient) {
-            image = image.rotate();
-          }
-
-          // Get original metadata
           const originalMetadata = await image.metadata();
-
-          // Check if resize is needed
-          const needsResize = ((originalMetadata.width &&
-            originalMetadata.width > config.maxWidth) ||
-            (originalMetadata.height && originalMetadata.height > config.maxHeight)) as boolean;
+          const needsResize = !!(
+            (originalMetadata.width && originalMetadata.width > config.maxWidth) ||
+            (originalMetadata.height && originalMetadata.height > config.maxHeight)
+          );
 
           if (needsResize) {
             image = image.resize(config.maxWidth, config.maxHeight, {
@@ -131,13 +131,7 @@ export function createImageOptimizationPlugin(
             });
           }
 
-          // Determine output format
-          let outputFormat = config.format;
-          if (outputFormat === 'auto') {
-            outputFormat = 'webp';
-          }
-
-          // Apply format and quality
+          const outputFormat = config.format === 'auto' ? 'webp' : config.format;
           const qualityPercent = Math.round(config.quality * 100);
           switch (outputFormat) {
             case 'webp':
@@ -147,74 +141,84 @@ export function createImageOptimizationPlugin(
               image = image.avif({ quality: qualityPercent });
               break;
             case 'jpeg':
-              image = image.jpeg({ quality: qualityPercent });
+              image = image.jpeg({ quality: qualityPercent, mozjpeg: true });
               break;
             case 'png':
-              image = image.png({ quality: qualityPercent });
+              image = image.png({ compressionLevel: 9, palette: qualityPercent < 100, quality: qualityPercent });
               break;
           }
 
-          // Strip metadata if requested
-          if (config.stripMetadata) {
-            image = image.withMetadata({});
-          }
+          // sharp strips metadata by default; keep it only when asked to
+          if (!config.stripMetadata) image = image.withMetadata();
 
-          // Convert to buffer
           const optimizedBuffer = await image.toBuffer();
           const optimizedSize = optimizedBuffer.byteLength;
 
-          // Get optimized dimensions
+          const sameFormat = originalMetadata.format === outputFormat;
+          const hasPrivateMetadata = config.stripMetadata && !!originalMetadata.exif;
+          if (config.skipIfLarger && !needsResize && sameFormat && optimizedSize >= originalSize && !hasPrivateMetadata) {
+            return {
+              file,
+              options: {
+                ...uploadOptions,
+                metadata: {
+                  ...uploadOptions.metadata,
+                  optimization: {
+                    originalSize,
+                    optimizedSize: originalSize,
+                    savings: 0,
+                    savingsPercent: '0.00%',
+                    format: outputFormat,
+                    quality: config.quality,
+                    resized: false,
+                    skipped: true,
+                  } satisfies OptimizationMetadata,
+                },
+              },
+            };
+          }
+
           const optimizedMetadata = await sharp(optimizedBuffer).metadata();
-
-          // Calculate savings
           const savings = originalSize - optimizedSize;
-          const savingsPercent = ((savings / originalSize) * 100).toFixed(2);
 
-          // Create optimization metadata
           const optimizationMeta: OptimizationMetadata = {
             originalSize,
             optimizedSize,
             savings,
-            savingsPercent: `${savingsPercent}%`,
+            savingsPercent: `${((savings / originalSize) * 100).toFixed(2)}%`,
             format: outputFormat,
             quality: config.quality,
             resized: needsResize,
             dimensions:
               originalMetadata.width && originalMetadata.height
                 ? {
-                    original: {
-                      width: originalMetadata.width,
-                      height: originalMetadata.height,
-                    },
+                    original: { width: originalMetadata.width, height: originalMetadata.height },
                     optimized: {
-                      width: optimizedMetadata.width!,
-                      height: optimizedMetadata.height!,
+                      width: optimizedMetadata.width ?? 0,
+                      height: optimizedMetadata.height ?? 0,
                     },
                   }
                 : undefined,
           };
 
-          // Create new File or return Buffer
-          let optimizedFile: File | Buffer;
-          if (typeof File !== 'undefined' && file instanceof File) {
-            const newFilename = file.name.replace(/\.[^.]+$/, `.${outputFormat}`);
-            optimizedFile = new File([optimizedBuffer], newFilename, {
-              type: `image/${outputFormat}`,
-            });
-          } else {
-            optimizedFile = optimizedBuffer;
-          }
+          const extension = outputFormat === 'jpeg' ? 'jpg' : outputFormat;
+          const optimizedFile: File | Buffer = isFileInput(file)
+            ? new File([new Uint8Array(optimizedBuffer)], (file as File).name.replace(/\.[^.]+$/, '') + `.${extension}`, {
+                type: MIME[outputFormat]!,
+              })
+            : optimizedBuffer;
 
-          // Add optimization metadata to options
-          const enrichedOptions: UploadOptions = {
-            ...uploadOptions,
-            metadata: {
-              ...uploadOptions.metadata,
-              optimization: optimizationMeta,
+          return {
+            file: optimizedFile,
+            options: {
+              ...uploadOptions,
+              contentType: MIME[outputFormat]!,
+              metadata: {
+                ...uploadOptions.metadata,
+                optimization: optimizationMeta,
+              },
             },
           };
-
-          return { file: optimizedFile, options: enrichedOptions };
         } catch (error) {
           // Log error but don't fail upload
           console.error('[image-optimization] Optimization failed:', error);

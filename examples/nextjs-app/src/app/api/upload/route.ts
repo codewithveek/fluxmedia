@@ -1,42 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createUploader, type ProviderType } from '@/lib/uploaders';
+import { createProxyUploadHandler } from '@fluxmedia/core/server';
+import { getUploader, getUser, parseProvider, UPLOAD_RULES } from '@/lib/uploaders';
 
 /**
- * API route for proxy uploads.
- * Supports multiple providers: cloudinary, s3, r2
+ * Proxy uploads: the file goes through this server, so plugins (retry,
+ * logging, …) run. The handler authenticates, enforces size before reading
+ * the body, detects the type from the file's bytes, and stores it under a
+ * folder chosen here — never one sent by the client.
  */
-export async function POST(request: NextRequest) {
-    try {
-        const formData = await request.formData();
-        const file = formData.get('file') as File;
-        const folder = formData.get('folder') as string | null;
-        const provider = (formData.get('provider') as ProviderType) || 'r2';
+export async function POST(request: Request) {
+  const provider = parseProvider(new URL(request.url).searchParams.get('provider') ?? 'r2');
+  if (!provider) return Response.json({ error: 'Unknown provider' }, { status: 400 });
 
-        if (!file) {
-            return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-        }
-
-        // Create uploader for the specified provider (with plugins enabled)
-        const uploader = await createUploader(provider, true);
-
-        // Convert File to Buffer
-        const buffer = Buffer.from(await file.arrayBuffer());
-
-        // Upload with plugins (logger will log, metadata will be enriched)
-        const result = await uploader.upload(buffer, {
-            folder: folder ?? undefined,
-            filename: file.name.replace(/\.[^/.]+$/, ''),
-
-        });
-
-        return NextResponse.json(result);
-    } catch (error) {
-        console.error('Upload error:', error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Upload failed' },
-            { status: 500 }
-        );
-    }
+  const handler = createProxyUploadHandler(await getUploader(provider), {
+    ...UPLOAD_RULES,
+    authorize: getUser,
+    folder: (user) => `uploads/${user.id}`,
+    onError: (error) => console.error('Upload error:', error),
+  });
+  return handler(request);
 }
-// Configure to allow larger file uploads
-export const bodyParser = false;

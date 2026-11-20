@@ -49,9 +49,13 @@ function UploadForm() {
 
 ```typescript
 interface UseMediaUploadConfig {
-  mode: 'direct' | 'signed' | 'proxy';
-  signUrlEndpoint?: string;  // For 'signed' mode
-  proxyEndpoint?: string;    // For 'proxy' mode
+  mode: 'signed' | 'proxy';  // 'direct' is rejected: it would expose credentials
+  signUrlEndpoint?: string;  // For 'signed' mode (createSignedUploadHandler)
+  proxyEndpoint?: string;    // For 'proxy' mode (createProxyUploadHandler)
+  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
+  credentials?: RequestCredentials; // default 'same-origin'
+  accept?: string | string[]; // client-side check: 'image/*', 'application/pdf', '.png'
+  maxSize?: number;           // client-side check, in bytes
   defaultOptions?: {
     folder?: string;
     tags?: string[];
@@ -62,26 +66,32 @@ interface UseMediaUploadConfig {
 }
 ```
 
+Client-side checks only give quick feedback; the server handlers enforce the real limits.
+
 ### Hook Return Values
 
 ```typescript
 interface UseMediaUploadReturn {
-  upload: (file: File, options?: UploadOptions) => Promise<UploadResult>;
+  upload: (file: File, options?: ClientUploadOptions) => Promise<UploadResult>;
+  cancel: () => void;        // abort the upload in progress
   uploading: boolean;
   progress: number; // 0-100
   result: UploadResult | null;
-  error: Error | null;
+  error: Error | null;       // UploadClientError with kind and status
   reset: () => void;
-  
+
   // Preview functionality
   preview: string | null;          // Object URL for preview
   setPreview: (file: File | null) => void;  // Set preview from file
-  
-  // File type detection (magic bytes)
+
+  // File type detection (magic bytes, first 4 KB only)
   fileType: { mime: string; ext: string } | null;
   detectFileType: (file: File) => Promise<{ mime: string; ext: string } | null>;
 }
 ```
+
+For many files, `useMediaUploadQueue(config, { concurrency })` tracks status, progress and errors per file, with `cancel(id)` and `retry(id)`. `<MediaUpload>` exposes `getRootProps()` and `isDragging` for drag-and-drop.
+
 
 ## Preview Before Upload
 

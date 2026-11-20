@@ -21,6 +21,12 @@ export const CloudinaryFeatures: ProviderFeatures = {
         videoProcessing: true,
         aiTagging: true,
         facialDetection: true,
+        signedUrls: true,
+        list: true,
+        search: true,
+        copy: true,
+        download: true,
+        updateMetadata: true,
     },
     storage: {
         maxFileSize: 100 * 1024 * 1024, // 100MB for free plan

@@ -62,81 +62,152 @@ const uploader = new MediaUploader(primaryProvider, [analyticsPlugin], {
 
 #### upload(file, options?)
 
-Upload a single file. Automatically falls back to the fallback provider on qualifying errors.
+Upload a single file. Runs `beforeUpload` hooks, the provider upload (wrapped by `wrapUpload` hooks such as retry), then `afterUpload` hooks. Fails over to the fallback provider on qualifying errors (never for streams).
 
 ```typescript
 async upload(file: UploadInput, options?: UploadOptions): Promise<UploadResult>
 ```
 
-#### delete(id)
+#### File references
 
-Delete a file by ID.
+Every method below that takes a `ref` accepts a file ID / storage key or the `UploadResult` returned by `upload()`. Passing the result routes the call to the provider that stored the file (after a failover) and passes hints such as Cloudinary's resource type.
 
 ```typescript
-async delete(id: string): Promise<void>
+type FileRef = string | UploadResult;
 ```
 
-#### get(id)
-
-Get file metadata.
+#### delete(ref) / deleteMultiple(refs)
 
 ```typescript
-async get(id: string): Promise<UploadResult>
+async delete(ref: FileRef): Promise<void>
+async deleteMultiple(refs: FileRef[], options?: { concurrency?: number }): Promise<void>
 ```
 
-#### getUrl(id, transform?)
+Plain IDs are deleted with the provider's batch API (S3/R2 `DeleteObjects`). Throws `DELETE_FAILED` with `details.failedIds` when some deletes fail. Deleting a missing file succeeds.
 
-Generate a URL synchronously, optionally with transformations.
+#### get(ref) / exists(ref)
 
 ```typescript
-getUrl(id: string, transform?: TransformationOptions): string
+async get(ref: FileRef): Promise<UploadResult>     // FILE_NOT_FOUND if missing
+async exists(ref: FileRef): Promise<boolean>
 ```
 
-#### getUrlAsync(id, transform?)
+#### getUrl(ref, transform?) / getUrlAsync(ref, transform?)
 
-Generate a URL asynchronously (for providers that need async URL generation like signed URLs).
+`getUrl` is synchronous; `getUrlAsync` also runs `beforeGetUrl` hooks. For private storage the URL is not readable — use `getSignedUrl`.
 
 ```typescript
-async getUrlAsync(id: string, transform?: TransformationOptions): Promise<string>
+getUrl(ref: FileRef, transform?: TransformationOptions): string
+async getUrlAsync(ref: FileRef, transform?: TransformationOptions): Promise<string>
+```
+
+#### getSignedUrl(ref, options?)
+
+Time-limited URL for reading a private file.
+
+```typescript
+async getSignedUrl(ref: FileRef, options?: {
+  expiresIn?: number;        // seconds, default 3600 (S3/R2/GCS/Azure max 7 days)
+  downloadAs?: string;       // force a download with this filename
+  transform?: TransformationOptions; // Cloudinary with token auth
+}): Promise<string>
+```
+
+#### createUploadUrl(options)
+
+Signed target for a direct browser upload. Expose it through `createSignedUploadHandler` (see Secure Uploads) rather than directly.
+
+```typescript
+async createUploadUrl(options: {
+  contentType: string;       // signed on S3, R2 and GCS
+  size?: number;             // exact size on S3/R2, upper bound on GCS
+  filename?: string;
+  folder?: string;
+  expiresIn?: number;        // default 600
+  uniqueFilename?: boolean;
+  metadata?: Record<string, unknown>;
+  tags?: string[];
+  cacheControl?: string;
+  contentDisposition?: string;
+  public?: boolean;
+}): Promise<SignedUploadTarget>
+
+interface SignedUploadTarget {
+  uploadUrl: string;
+  method: 'PUT' | 'POST';
+  headers?: Record<string, string>; // send with PUT
+  fields?: Record<string, string>;  // send before "file" with POST
+  storageKey: string;
+  publicUrl?: string;
+  expiresAt: Date;
+  provider: string;
+}
+```
+
+#### list(options?) / listAll(options?)
+
+```typescript
+async list(options?: { folder?: string; limit?: number; cursor?: string }): Promise<{
+  items: UploadResult[];
+  nextCursor?: string;
+}>
+
+for await (const file of uploader.listAll({ folder: 'invoices' })) {
+  // follows cursors for you
+}
+```
+
+#### search(query)
+
+Supported by Cloudinary (Search API). Other providers throw `NOT_SUPPORTED`; use `list`.
+
+#### copy(ref, toId) / move(ref, toId)
+
+```typescript
+async copy(ref: FileRef, toId: string): Promise<UploadResult>
+async move(ref: FileRef, toId: string): Promise<UploadResult>
+```
+
+#### download(ref)
+
+```typescript
+async download(ref: FileRef): Promise<{
+  body: ReadableStream<Uint8Array>;
+  contentType?: string;
+  size?: number;
+}>
+```
+
+#### updateMetadata(ref, metadata)
+
+Replaces the file's custom metadata (top-level primitive values only).
+
+```typescript
+async updateMetadata(ref: FileRef, metadata: Record<string, unknown>): Promise<void>
 ```
 
 #### uploadMultiple(files, options?)
 
-Upload multiple files with concurrency control. Routes through plugin hooks.
+Uploads with a concurrency limit, running plugins for each file. When any upload fails it throws a `MediaError` whose `details.succeeded` holds the results that did upload and `details.failed` the errors by index.
 
 ```typescript
 async uploadMultiple(
   files: UploadInput[],
-  options?: UploadOptions & {
-    concurrency?: number;
-    onBatchProgress?: (completed: number, total: number) => void;
-  }
+  options?: UploadOptions & { concurrency?: number } // default 3
 ): Promise<UploadResult[]>
 ```
 
-#### deleteMultiple(ids)
+#### uploadWithTransaction(file, options, callbacks)
 
-Delete multiple files. Routes through plugin hooks.
-
-```typescript
-async deleteMultiple(ids: string[]): Promise<void>
-```
-
-#### uploadWithTransaction(file, options?, callbacks?)
-
-Upload with transaction semantics — commit on success, rollback on failure.
+Upload, then commit; if the commit throws, the upload is rolled back (`onRollback`, or deleted from the provider that stored it).
 
 ```typescript
 async uploadWithTransaction<T>(
   file: UploadInput,
-  options?: UploadOptions,
-  callbacks?: TransactionCallbacks<T>
-): Promise<{ result: UploadResult; committed: T }>
-```
+  options: UploadOptions,
+  callbacks: TransactionCallbacks<T>
+): Promise<{ uploadResult: UploadResult; commitResult: T }>
 
-**TransactionCallbacks:**
-
-```typescript
 interface TransactionCallbacks<T> {
   onCommit: (result: UploadResult) => Promise<T>;
   onRollback?: (result: UploadResult, error: Error) => Promise<void>;
@@ -146,21 +217,20 @@ interface TransactionCallbacks<T> {
 **Example:**
 
 ```typescript
-const { result, committed } = await uploader.uploadWithTransaction(
+const { uploadResult, commitResult } = await uploader.uploadWithTransaction(
   file,
   { folder: 'documents' },
   {
     onCommit: async (result) => {
-      // Save to database after successful upload
-      return await db.documents.create({ url: result.url, storageKey: result.storageKey });
-    },
-    onRollback: async (result, error) => {
-      // Clean up the uploaded file if commit fails
-      await uploader.delete(result.id);
+      return await db.documents.create({ storageKey: result.storageKey, provider: result.provider });
     },
   }
 );
 ```
+
+#### ready()
+
+Resolves once constructor plugins are initialized; rejects if one's `init()` failed.
 
 #### supports(feature)
 
@@ -198,29 +268,37 @@ Supports browser `File` objects, Node.js `Buffer`, Node.js `Readable` streams, a
 interface UploadOptions {
   folder?: string;
   filename?: string;
+  public?: boolean;
   tags?: string[];
   metadata?: Record<string, unknown>;
   transformation?: TransformationOptions;
   onProgress?: (percent: number) => void;
-  onByteProgress?: (loaded: number, total: number) => void;
-  uniqueFilename?: boolean; // Generate unique names (default: true)
-  contentType?: string; // MIME type override
-  signal?: AbortSignal; // Abort controller signal
+  onByteProgress?: (loaded: number, total: number | undefined) => void;
+  uniqueFilename?: boolean;     // Append a random suffix (default: true)
+  contentType?: string;         // Required for streams
+  cacheControl?: string;
+  contentDisposition?: string;
+  signal?: AbortSignal;
+  providerOptions?: Record<string, unknown>;
 }
 ```
 
-| Option           | Type                                      | Description                                    |
-| ---------------- | ----------------------------------------- | ---------------------------------------------- |
-| `folder`         | `string`                                  | Destination folder path                        |
-| `filename`       | `string`                                  | Custom filename                                |
-| `tags`           | `string[]`                                | Tags for organization                          |
-| `metadata`       | `Record<string, unknown>`                 | Custom metadata key-value pairs                |
-| `transformation` | `TransformationOptions`                   | Apply transformations on upload                |
-| `onProgress`     | `(percent: number) => void`               | Normalized 0-100 progress callback             |
-| `onByteProgress` | `(loaded: number, total: number) => void` | Raw byte-level progress callback               |
-| `uniqueFilename` | `boolean`                                 | Generate unique filenames (default: `true`)    |
-| `contentType`    | `string`                                  | Override auto-detected MIME type               |
-| `signal`         | `AbortSignal`                             | Cancel in-flight uploads via `AbortController` |
+| Option | Type | Description |
+|--------|------|-------------|
+| `folder` | `string` | Destination folder. Sanitized: `..` segments and unsafe characters are removed |
+| `filename` | `string` | Custom filename (without extension), sanitized the same way |
+| `public` | `boolean` | Visibility. Cloudinary stores `false` as `authenticated`; S3 applies an ACL with `useAcl`; requests a bucket cannot honour fail |
+| `tags` | `string[]` | Tags (S3/R2 object tags, Cloudinary tags) |
+| `metadata` | `Record<string, unknown>` | Custom metadata. Only top-level string/number/boolean values are stored; `_`-prefixed keys and nested objects stay in-process |
+| `transformation` | `TransformationOptions` | Apply transformations on upload (Cloudinary) |
+| `onProgress` | `(percent: number) => void` | Normalized 0-100 progress callback |
+| `onByteProgress` | `(loaded, total) => void` | Byte progress; `total` is undefined for streams |
+| `uniqueFilename` | `boolean` | Append a random suffix (default: `true`) |
+| `contentType` | `string` | MIME type; required for streams (Buffers and Files are detected from content) |
+| `cacheControl` | `string` | `Cache-Control` for the stored object |
+| `contentDisposition` | `string` | `Content-Disposition` for the stored object |
+| `signal` | `AbortSignal` | Cancel the upload (`ABORTED` error) |
+| `providerOptions` | `Record<string, unknown>` | Native parameters, e.g. S3 `StorageClass`. Never from client input |
 
 ### UploadResult
 
@@ -229,7 +307,7 @@ interface UploadResult {
   id: string;
   storageKey: string;
   url: string;
-  publicUrl: string;
+  publicUrl?: string;
   size: number;
   format: string;
   width?: number;
@@ -245,7 +323,7 @@ interface UploadResult {
 | `id`         | `string`                  | Unique identifier for the uploaded file                                   |
 | `storageKey` | `string`                  | Provider-specific storage key (e.g., S3 object key, Cloudinary public ID) |
 | `url`        | `string`                  | Direct URL to the file                                                    |
-| `publicUrl`  | `string`                  | Public-facing URL                                                         |
+| `publicUrl`  | `string` (optional)       | Public URL. Omitted for private storage served through signed URLs        |
 | `size`       | `number`                  | File size in bytes                                                        |
 | `format`     | `string`                  | File format/extension                                                     |
 | `width`      | `number`                  | Image width (if applicable)                                               |
@@ -275,12 +353,27 @@ interface MediaProvider {
   readonly native: unknown;
 
   upload(file: UploadInput, options?: UploadOptions): Promise<UploadResult>;
-  delete(id: string): Promise<void>;
-  get(id: string): Promise<UploadResult>;
-  getUrl(id: string, transform?: TransformationOptions): string;
+  delete(id: string, options?: ResourceOptions): Promise<void>;
+  get(id: string, options?: ResourceOptions): Promise<UploadResult>;
+  getUrl(id: string, transform?: TransformationOptions, options?: ResourceOptions): string;
   uploadMultiple(files: UploadInput[], options?: UploadOptions): Promise<UploadResult[]>;
-  deleteMultiple(ids: string[]): Promise<void>;
+  deleteMultiple(ids: string[], options?: ResourceOptions): Promise<void>;
+
+  // Optional capabilities
+  getSignedUrl?(id: string, options?: SignedUrlOptions): Promise<string>;
+  createUploadUrl?(options: SignedUploadOptions): Promise<SignedUploadTarget>;
+  exists?(id: string, options?: ResourceOptions): Promise<boolean>;
+  list?(options?: ListOptions): Promise<ListResult>;
   search?(query: SearchOptions): Promise<UploadResult[]>;
+  copy?(fromId: string, toId: string, options?: ResourceOptions): Promise<UploadResult>;
+  move?(fromId: string, toId: string, options?: ResourceOptions): Promise<UploadResult>;
+  download?(id: string, options?: ResourceOptions): Promise<DownloadResult>;
+  updateMetadata?(id: string, metadata: Record<string, unknown>, options?: ResourceOptions): Promise<void>;
+}
+
+// Hints from an UploadResult's metadata (e.g. Cloudinary resourceType)
+interface ResourceOptions {
+  metadata?: Record<string, unknown>;
 }
 ```
 
@@ -304,6 +397,12 @@ interface ProviderFeatures {
     videoProcessing: boolean;
     aiTagging: boolean;
     facialDetection: boolean;
+    signedUrls?: boolean;
+    list?: boolean;
+    search?: boolean;
+    copy?: boolean;
+    download?: boolean;
+    updateMetadata?: boolean;
   };
   storage: {
     maxFileSize: number;
@@ -387,65 +486,52 @@ enum MediaErrorCode {
   RATE_LIMITED = 'RATE_LIMITED',
   QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
 
-  // Configuration errors
+  // Configuration errors (also: unsafe storage keys)
   INVALID_CONFIG = 'INVALID_CONFIG',
   MISSING_CREDENTIALS = 'MISSING_CREDENTIALS',
 
   // File errors
   FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   DELETE_FAILED = 'DELETE_FAILED',
+
+  // Operation errors
+  ABORTED = 'ABORTED',             // cancelled through an AbortSignal; never retried
+  NOT_SUPPORTED = 'NOT_SUPPORTED', // the provider lacks this operation
 }
 ```
 
+`isAbortError(error)` is true for `ABORTED` MediaErrors and DOM/Node `AbortError`s.
+
 ### createMediaError
 
-Factory function for creating consistent `MediaError` instances:
+Factory function for creating consistent `MediaError` instances (the message is taken from the original error):
 
 ```typescript
 import { createMediaError, MediaErrorCode } from '@fluxmedia/core';
 
-const error = createMediaError(MediaErrorCode.UPLOAD_FAILED, 'Upload timed out', 'cloudinary', {
-  originalError: err,
-  details: { timeout: 30000 },
-});
+const error = createMediaError(
+  MediaErrorCode.UPLOAD_FAILED,
+  'cloudinary',
+  originalError,
+  { timeout: 30000 } // details
+);
 ```
 
 ### PartialUploadError
 
-Specialized error for resumable multipart uploads. Preserves upload context so retries can resume from where they left off.
+Error type for custom upload code that can resume multipart uploads. `withRetry` passes its `uploadContext` to the next attempt. The built-in providers do not throw it: they abort failed multipart uploads and retry from the start.
 
 ```typescript
 class PartialUploadError extends MediaError {
   uploadContext: PartialUploadContext;
 }
-```
 
-### PartialUploadContext
-
-```typescript
 interface PartialUploadContext {
   uploadId: string;
-  completedParts: number[];
-  totalParts: number;
-  bytesUploaded: number;
+  key: string;
+  completedParts: Array<{ partNumber: number; etag: string }>;
   provider: string;
 }
-```
-
-**Example — Handling partial upload failures:**
-
-```typescript
-import { PartialUploadError } from '@fluxmedia/core';
-import { withRetry } from '@fluxmedia/plugins';
-
-// withRetry automatically resumes from PartialUploadContext
-const result = await withRetry(
-  (resumeContext) =>
-    uploader.upload(file, {
-      metadata: resumeContext ? { _resumeFrom: resumeContext } : {},
-    }),
-  { maxRetries: 3, exponentialBackoff: true }
-);
 ```
 
 ---
@@ -470,19 +556,27 @@ The `optional` flag enables graceful degradation — if an optional plugin's hoo
 ### PluginHooks
 
 ```typescript
+type UploadFn = (file: UploadInput, options: UploadOptions) => Promise<UploadResult>;
+
 interface PluginHooks {
   beforeUpload?: (
-    file: File | Buffer,
+    file: UploadInput,
     options: UploadOptions
-  ) => Promise<{ file: File | Buffer; options: UploadOptions } | void>;
-  afterUpload?: (result: UploadResult) => Promise<UploadResult>;
+  ) => Promise<{ file: UploadInput; options: UploadOptions } | void>;
+  // Wrap the provider upload: retry, short-circuit (dedupe), time it…
+  // The first registered plugin is the outermost wrapper.
+  wrapUpload?: (next: UploadFn) => UploadFn;
+  afterUpload?: (
+    result: UploadResult,
+    context: { file: UploadInput; options: UploadOptions }
+  ) => Promise<UploadResult>;
   onError?: (
     error: Error,
     context: {
-      file: File | Buffer;
+      file: UploadInput;
       options: UploadOptions;
       phase: UploadPhase;
-      uploadResult?: UploadResult;
+      uploadResult?: UploadResult; // present for 'afterUpload'
     }
   ) => Promise<void>;
   beforeDelete?: (id: string) => Promise<string | void>;
@@ -494,10 +588,12 @@ interface PluginHooks {
 }
 ```
 
+A failing `onError` hook is logged and never replaces the original error.
+
 ### UploadPhase
 
 ```typescript
-type UploadPhase = 'before' | 'upload' | 'after';
+type UploadPhase = 'beforeUpload' | 'upload' | 'afterUpload';
 ```
 
 Indicates which phase of the upload pipeline the error occurred in, available in `onError` context.
@@ -583,7 +679,7 @@ Helpers for testing custom providers and upload logic.
 Creates a mock `MediaProvider` for unit tests:
 
 ```typescript
-import { createMockProvider, createMockUploadResult } from '@fluxmedia/core';
+import { createMockProvider, createMockUploadResult } from '@fluxmedia/core/testing';
 
 const provider = createMockProvider({
   name: 'test-provider',
@@ -597,7 +693,7 @@ const result = await provider.upload(file);
 Validates that a custom provider correctly implements the `MediaProvider` interface:
 
 ```typescript
-import { createProviderContractTests } from '@fluxmedia/core';
+import { createProviderContractTests } from '@fluxmedia/core/testing';
 
 createProviderContractTests('MyProvider', () => new MyProvider({ ... }));
 ```

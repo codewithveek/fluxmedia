@@ -3,14 +3,16 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check, Minus } from 'lucide-react';
 
-const providers = ['Cloudinary', 'AWS S3', 'Cloudflare R2'] as const;
+const providers = ['Cloudinary', 'AWS S3', 'Cloudflare R2', 'Google Cloud', 'Azure Blob', 'Local disk'] as const;
 
 const capabilities = [
-  { label: 'Image transforms', values: [true, false, false] },
-  { label: 'Video processing', values: [true, false, false] },
-  { label: 'AI tagging', values: [true, false, false] },
-  { label: 'Multipart upload', values: [true, true, true] },
-  { label: 'Direct upload', values: [true, true, true] },
+  { label: 'Image transforms', values: [true, false, false, false, false, false] },
+  { label: 'Video processing', values: [true, false, false, false, false, false] },
+  { label: 'AI tagging', values: [true, false, false, false, false, false] },
+  { label: 'Signed download URLs', values: [true, true, true, true, true, true] },
+  { label: 'Signed browser uploads', values: [true, true, true, true, true, false] },
+  { label: 'List, copy, move', values: [true, true, true, true, true, true] },
+  { label: 'Multipart / resumable', values: [true, true, true, true, true, false] },
 ] as const;
 
 const easeOut = [0.16, 1, 0.3, 1] as const;
@@ -31,7 +33,7 @@ export function ProvidersSection() {
             </p>
           </div>
           <p className="max-w-sm font-mono text-sm text-muted-foreground">
-            R2 ships with zero egress fees. Cloudinary carries transforms. S3 stays minimal.
+            Cloudinary carries transforms. R2 ships with zero egress fees. Every provider signs private URLs.
           </p>
         </div>
 
@@ -42,7 +44,7 @@ export function ProvidersSection() {
           transition={{ duration: 0.5, ease: easeOut }}
           className="overflow-x-auto rounded-lg border border-border"
         >
-          <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-raised">
                 <th scope="col" className="px-5 py-4 font-medium text-muted-foreground">

@@ -1,0 +1,6 @@
+*.map
+src/
+tsup.config.ts
+vitest.config.ts
+__tests__/
+*.test.ts

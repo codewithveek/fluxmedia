@@ -6,16 +6,19 @@
 
 **One API for all your media uploads.**
 
-A unified, TypeScript-first media library for modern applications. Upload to Cloudinary, S3, R2, and more with a single interface.
+A unified, TypeScript-first media library for modern applications. Upload to Cloudinary, AWS S3, Cloudflare R2, Google Cloud Storage, Azure Blob Storage or the local filesystem with a single interface.
 
 ## Features
 
 - **Unified API** - Write once, use any provider
+- **Secure browser uploads** - Server handlers that authenticate, check type (by content) and size, and choose the folder on the server; signed upload URLs that enforce content type and size on S3/R2
+- **Private files** - Optional public URLs, time-limited signed download URLs on every provider
+- **File operations** - Upload, get, delete (batched), list with cursors, copy, move, download streams, metadata updates
+- **Reliable** - Cancel with `AbortSignal`, retry with backoff, provider failover, transactional uploads
 - **Type-safe** - Full TypeScript support with intelligent autocomplete
-- **Tree-shakeable** - Only bundle what you use
-- **React integration** - Hooks and components included
-- **Extensible** - Plugin system and native provider API access
-- **Lightweight** - Lazy loading and dynamic imports for minimal bundle size
+- **React integration** - Hooks for single files and queues, drag-and-drop component
+- **Extensible** - Plugin system (validation, optimization, virus scanning, dedupe, placeholders…) and native SDK access
+- **Lightweight** - SDKs are peer dependencies and load lazily
 
 ## Quick Start
 
@@ -51,57 +54,63 @@ console.log(result.url);
 
 ## Packages
 
-| Package                                        | Description                 | Size  |
-| ---------------------------------------------- | --------------------------- | ----- |
-| [@fluxmedia/core](./packages/core)             | Core types and abstractions | ~13KB |
-| [@fluxmedia/cloudinary](./packages/cloudinary) | Cloudinary provider         | ~14KB |
-| [@fluxmedia/s3](./packages/s3)                 | AWS S3 provider             | ~11KB |
-| [@fluxmedia/r2](./packages/r2)                 | Cloudflare R2 provider      | ~12KB |
-| [@fluxmedia/plugins](./packages/plugins)       | Official plugins            | ~20KB |
-| [@fluxmedia/react](./packages/react)           | React hooks and components  | ~9KB  |
+| Package                                        | Description                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------- |
+| [@fluxmedia/core](./packages/core)             | Core API, server handlers, in-memory provider, signing      |
+| [@fluxmedia/cloudinary](./packages/cloudinary) | Cloudinary provider                                         |
+| [@fluxmedia/s3](./packages/s3)                 | AWS S3 and S3-compatible storage (MinIO, B2, Wasabi, …)     |
+| [@fluxmedia/r2](./packages/r2)                 | Cloudflare R2 (S3 API, or Workers bucket bindings)          |
+| [@fluxmedia/gcs](./packages/gcs)               | Google Cloud Storage                                        |
+| [@fluxmedia/azure](./packages/azure)           | Azure Blob Storage                                          |
+| [@fluxmedia/local](./packages/local)           | Local filesystem (development, self-hosting)                |
+| [@fluxmedia/plugins](./packages/plugins)       | Official plugins                                            |
+| [@fluxmedia/react](./packages/react)           | React hooks and components                                  |
 
 ## Why FluxMedia?
 
 ### Unified API Across Providers
 
-Use the same code regardless of which provider you choose:
-
 ```typescript
-// Cloudinary
 const uploader = new MediaUploader(new CloudinaryProvider({ ... }));
+// or new S3Provider, R2Provider, GCSProvider, AzureBlobProvider, LocalProvider, MemoryProvider
 
-// S3
-const uploader = new MediaUploader(new S3Provider({ ... }));
-
-// R2
-const uploader = new MediaUploader(new R2Provider({ ... }));
-
-// Use the same API everywhere
-await uploader.upload(file);
+const result = await uploader.upload(file);
+await uploader.getSignedUrl(result, { expiresIn: 300 });
+await uploader.delete(result);
 ```
 
-### TypeScript First
+### Secure Browser Uploads
 
-Full type safety and IntelliSense support:
+The browser uploads straight to storage; your server only signs the request after checking who is uploading and what:
 
 ```typescript
-const result = await uploader.upload(file);
-// result.url - autocomplete knows all properties
-// result.width, result.height, result.format, etc.
+// app/api/upload/sign/route.ts (Next.js, Remix, Hono, Bun, …)
+import { createSignedUploadHandler } from '@fluxmedia/core/server';
+
+export const POST = createSignedUploadHandler(uploader, {
+  authorize: (request) => getSessionUser(request), // required
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSize: 10 * 1024 * 1024,
+  folder: (user) => `users/${user.id}`, // decided on the server
+});
 ```
 
-### Lightweight Bundles
+On S3 and R2 the content type and exact byte size are part of the signature, so storage rejects any other file. `createProxyUploadHandler` does the same for uploads that go through your server, detecting the type from the file's bytes.
 
-Tree-shakeable architecture with lazy loading:
+### Private Files
 
-- **Core**: ~13KB (minified, excludes SDK)
-- **Provider packages**: ~11-14KB each (excludes SDK)
-- **Plugins**: ~20KB (all 5 plugins)
+Public URLs are optional. Leave them off for private buckets and hand out short-lived links:
+
+```typescript
+const provider = new R2Provider({ accountId, bucket, accessKeyId, secretAccessKey }); // no publicUrl
+const result = await uploader.upload(file);           // result.publicUrl is undefined
+const url = await uploader.getSignedUrl(result, { expiresIn: 300 });
+```
 
 ## Examples
 
 - [Basic Node.js](./examples/basic-node) - All providers, plugins, and core features
-- [Next.js App](./examples/nextjs-app) - Full Next.js integration with all providers
+- [Next.js App](./examples/nextjs-app) - Signed and proxy uploads with authentication and private files
 
 ## React Integration
 
@@ -109,29 +118,34 @@ Tree-shakeable architecture with lazy loading:
 pnpm add @fluxmedia/react
 ```
 
-```typescript
+```tsx
 import { useMediaUpload } from '@fluxmedia/react';
 
 function UploadButton() {
-  const { upload, uploading, progress, error, result } = useMediaUpload({
+  const { upload, cancel, uploading, progress, error, result } = useMediaUpload({
     mode: 'signed',
-    signUrlEndpoint: '/api/media/sign'
+    signUrlEndpoint: '/api/upload/sign',
+    accept: ['image/*'],
+    maxSize: 10 * 1024 * 1024,
   });
 
   return (
     <div>
       <input
         type="file"
-        onChange={(e) => upload(e.target.files?.[0])}
+        onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
         disabled={uploading}
       />
       {uploading && <progress value={progress} max={100} />}
-      {result && <img src={result.url} alt="Uploaded" />}
+      {uploading && <button onClick={cancel}>Cancel</button>}
+      {result?.publicUrl && <img src={result.publicUrl} alt="Uploaded" />}
       {error && <div>Error: {error.message}</div>}
     </div>
   );
 }
 ```
+
+`useMediaUploadQueue` handles many files with per-file progress, cancel and retry; `<MediaUpload>` adds drag-and-drop.
 
 ## Plugins
 
@@ -139,23 +153,27 @@ function UploadButton() {
 pnpm add @fluxmedia/plugins
 ```
 
-Available plugins:
-
-- **File Validation** - Validate types, sizes, extensions
-- **Image Optimization** - Resize, format, quality (requires sharp)
-- **Metadata Extraction** - EXIF, dimensions, hashing
+- **File Validation** - Types (detected from content), sizes, extensions; SVG must be allowed explicitly
+- **Image Optimization** - Resize, re-encode and strip EXIF/GPS (requires sharp)
+- **Metadata Extraction** - Dimensions, EXIF (GPS opt-in), hashing
+- **Virus Scanning** - Any scanner, or the built-in ClamAV client
+- **Deduplication** - Skip re-uploading identical content within a folder
+- **Placeholders** - Blurred preview data URI and dominant color
 - **Analytics** - Logging and tracking with typed events
-- **Retry** - Automatic retry with exponential backoff
+- **Retry** - Automatic retry with exponential backoff and jitter
 
 ## Provider Feature Comparison
 
-| Feature               | Cloudinary | S3  | R2  |
-| --------------------- | ---------- | --- | --- |
-| Image Transformations | Yes        | No  | No  |
-| Video Processing      | Yes        | No  | No  |
-| AI Tagging            | Yes        | No  | No  |
-| Multipart Upload      | Yes        | Yes | Yes |
-| Direct Upload         | Yes        | Yes | Yes |
+| Feature                  | Cloudinary | S3  | R2  | GCS | Azure | Local |
+| ------------------------ | ---------- | --- | --- | --- | ----- | ----- |
+| Image Transformations    | Yes        | No  | No  | No  | No    | No    |
+| Video Processing         | Yes        | No  | No  | No  | No    | No    |
+| Signed download URLs     | Yes        | Yes | Yes | Yes | Yes   | Yes   |
+| Signed browser uploads   | Yes        | Yes | Yes | Yes | Yes   | No    |
+| Size/type in signature   | Type only  | Yes | Yes | Yes | No    | -     |
+| List / copy / move       | Yes        | Yes | Yes | Yes | Yes   | Yes   |
+| Search                   | Yes        | No  | No  | No  | No    | No    |
+| Multipart / resumable    | Yes        | Yes | Yes | Yes | Yes   | -     |
 
 ## Development
 
@@ -172,6 +190,8 @@ pnpm test
 # Lint
 pnpm lint
 ```
+
+S3 integration tests run against LocalStack when `S3_INTEGRATION_ENDPOINT` is set (see `packages/s3/src/__tests__/integration.test.ts`).
 
 ## Contributing
 

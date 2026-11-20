@@ -1,0 +1,66 @@
+{
+  "name": "@fluxmedia/azure",
+  "version": "2.0.3",
+  "description": "Azure Blob Storage provider for FluxMedia - unified media upload library",
+  "keywords": [
+    "fluxmedia",
+    "azure",
+    "blob",
+    "storage",
+    "cloud",
+    "media",
+    "upload"
+  ],
+  "homepage": "https://www.fluxmedia.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithveek/fluxmedia.git",
+    "directory": "packages/azure"
+  },
+  "license": "MIT",
+  "author": "FluxMedia Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@fluxmedia/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.4",
+    "typescript": "^5.3.3",
+    "@azure/storage-blob": "^12.27.0"
+  },
+  "peerDependencies": {
+    "@azure/storage-blob": "^12.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

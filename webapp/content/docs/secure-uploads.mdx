@@ -1,0 +1,121 @@
+# Secure Uploads and Private Files
+
+How to accept uploads from browsers without opening your bucket to the world, and how to serve files that should not be public.
+
+## The two upload paths
+
+| Path       | How it works                                                  | Use it when                                         |
+| ---------- | ------------------------------------------------------------- | --------------------------------------------------- |
+| **Signed** | Your server signs a short-lived target; the browser uploads straight to storage | Large files, low server load                        |
+| **Proxy**  | The browser posts the file to your server, which uploads it   | You need plugins (virus scanning, optimization) to run on every file |
+
+Both are implemented by handlers in `@fluxmedia/core/server`, built on the Web `Request`/`Response` API. They work in Next.js App Router routes, Remix and React Router actions, Hono, SvelteKit, Bun and Deno.
+
+## Signed uploads
+
+```typescript
+// app/api/upload/sign/route.ts
+import { createSignedUploadHandler } from '@fluxmedia/core/server';
+import { uploader } from '@/lib/media';
+
+export const POST = createSignedUploadHandler(uploader, {
+  authorize: async (request) => getSessionUser(request), // null → 401
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  maxSize: 10 * 1024 * 1024,
+  folder: (user) => `users/${user.id}`,
+  expiresIn: 300,
+});
+```
+
+The browser sends `{ filename, contentType, size }`. The handler:
+
+1. Answers `401` unless `authorize` returns a user.
+2. Answers `413` above `maxSize` and `415` for types outside `allowedTypes`.
+3. Builds the key on the server: your `folder`, a sanitized filename and a random suffix. Client-supplied folders and paths are ignored.
+4. Returns a `SignedUploadTarget` (`uploadUrl`, `method`, `headers` or `fields`, `storageKey`, `expiresAt`).
+
+What the storage then enforces depends on the provider:
+
+| Provider   | Content type enforced  | Size enforced                     |
+| ---------- | ---------------------- | --------------------------------- |
+| S3, R2     | Yes (signed header)    | Yes, exact size (signed header)   |
+| GCS        | Yes (signed header)    | Yes, upper bound (`x-goog-content-length-range`) |
+| Cloudinary | Format (`allowed_formats`) | No — use an upload preset with limits |
+| Azure      | No                     | No — check after upload, or use proxy |
+
+On the client:
+
+```tsx
+const { upload } = useMediaUpload({ mode: 'signed', signUrlEndpoint: '/api/upload/sign' });
+```
+
+Allow your origin in the bucket's CORS rules (`PUT` for S3/R2/GCS/Azure, `POST` for Cloudinary, with the `Content-Type` header).
+
+## Proxy uploads
+
+```typescript
+// app/api/upload/route.ts
+import { createProxyUploadHandler } from '@fluxmedia/core/server';
+
+export const POST = createProxyUploadHandler(uploader, {
+  authorize: async (request) => getSessionUser(request),
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+  maxSize: 25 * 1024 * 1024,
+  folder: (user) => `users/${user.id}`,
+});
+```
+
+The proxy handler requires `Content-Length` and rejects oversized requests before reading the body. It identifies the file from its bytes: a file that claims to be `image/png` but is HTML is rejected. Responses contain only safe fields (no internal metadata), and unexpected errors are answered with a generic `500` (log them with `onError`).
+
+## Allowed types and SVG
+
+`allowedTypes` accepts exact types and wildcards (`image/*`). SVG is never matched by `image/*`: an SVG can contain scripts that run when the file is opened from your domain. List `image/svg+xml` explicitly only if you serve uploads from a separate domain or with a sandboxing Content-Security-Policy.
+
+## Private files
+
+Leave the public URL off and hand out short-lived links:
+
+```typescript
+const uploader = new MediaUploader(
+  new S3Provider({ region: 'us-east-1', bucket: 'private-docs', publicUrl: false })
+);
+
+const result = await uploader.upload(file, { folder: `users/${user.id}` });
+result.publicUrl; // undefined
+
+const url = await uploader.getSignedUrl(result, { expiresIn: 300, downloadAs: 'invoice.pdf' });
+```
+
+| Provider             | Private by                     | Signed URL                                   |
+| -------------------- | ------------------------------ | -------------------------------------------- |
+| S3                   | `publicUrl: false`             | Presigned GET (max 7 days)                   |
+| R2                   | Omitting `publicUrl`           | Presigned GET (max 7 days)                   |
+| GCS                  | `publicUrl: false`             | V4 signed URL (max 7 days)                   |
+| Azure                | `publicUrl: false`             | SAS (account key or user delegation)         |
+| Cloudinary           | `public: false` per upload     | Private download URL, or token auth          |
+| Local / R2 bindings  | `private: true` / no `publicUrl` | HMAC URL checked with `verifySignedUrl()`   |
+
+Check ownership before signing. A route that signs any key it is given lets users read each other's files:
+
+```typescript
+export async function GET(request: Request) {
+  const user = await getSessionUser(request);
+  const key = new URL(request.url).searchParams.get('key') ?? '';
+  if (!user || !key.startsWith(`users/${user.id}/`)) return new Response('Not found', { status: 404 });
+  return Response.json({ url: await uploader.getSignedUrl(key, { expiresIn: 300 }) });
+}
+```
+
+## Metadata and privacy
+
+Only top-level string, number and boolean metadata values are written to storage. Keys starting with `_` and nested objects stay in your process. This keeps plugin data such as EXIF out of object headers, which can be readable by anyone who can read the object.
+
+The image optimization plugin strips EXIF (including GPS location) by default, and the metadata extraction plugin only extracts GPS with `includeGps: true`.
+
+## Checklist
+
+- Every upload route uses `authorize`, `allowedTypes` and `maxSize`.
+- The folder comes from the server (`folder: (user) => …`), never from the request.
+- Private buckets use `publicUrl: false` (or no `publicUrl` on R2) and a signing route that checks ownership.
+- User uploads are served from a separate domain or with `X-Content-Type-Options: nosniff` and a sandboxing CSP (`createLocalFileHandler` does this).
+- Consider `createVirusScanPlugin` for proxy uploads of documents.

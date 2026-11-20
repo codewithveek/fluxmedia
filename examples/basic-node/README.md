@@ -8,6 +8,8 @@ Demonstrates using FluxMedia with all available providers and the plugin system.
 - **AWS S3** - Standard cloud storage
 - **Cloudflare R2** - S3-compatible with no egress fees
 
+Google Cloud Storage (`@fluxmedia/gcs`), Azure Blob Storage (`@fluxmedia/azure`) and the local filesystem (`@fluxmedia/local`) use the same API. For browser uploads, private files and signed URLs, see the [Next.js example](../nextjs-app) and the [Secure Uploads guide](https://www.fluxmedia.dev/docs/secure-uploads).
+
 ## Setup
 
 ```bash

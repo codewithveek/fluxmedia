@@ -46,22 +46,36 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@fluxmedia/core": "workspace:*"
+    "@fluxmedia/core": "workspace:*",
+    "@fluxmedia/s3": "workspace:*"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.980.0",
     "@aws-sdk/lib-storage": "^3.980.0",
     "@types/node": "^22.19.4",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@aws-sdk/s3-request-presigner": "^3.980.0"
   },
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/lib-storage": "^3.0.0"
+    "@aws-sdk/lib-storage": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    },
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/lib-storage": {
+      "optional": true
+    }
   }
 }

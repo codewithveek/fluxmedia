@@ -29,7 +29,9 @@ export default defineConfig({
     resolve: {
         alias: {
             '@fluxmedia/core/testing': path.resolve(__dirname, 'packages/core/src/testing.ts'),
+            '@fluxmedia/core/server': path.resolve(__dirname, 'packages/core/src/server.ts'),
             '@fluxmedia/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
+            '@fluxmedia/s3': path.resolve(__dirname, 'packages/s3/src/index.ts'),
         },
     },
 });

@@ -1,0 +1,61 @@
+{
+  "name": "@fluxmedia/local",
+  "version": "2.0.3",
+  "description": "Local filesystem provider for FluxMedia - unified media upload library",
+  "keywords": [
+    "fluxmedia",
+    "local",
+    "filesystem",
+    "disk",
+    "media",
+    "upload"
+  ],
+  "homepage": "https://www.fluxmedia.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithveek/fluxmedia.git",
+    "directory": "packages/local"
+  },
+  "license": "MIT",
+  "author": "FluxMedia Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@fluxmedia/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.4",
+    "typescript": "^5.3.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

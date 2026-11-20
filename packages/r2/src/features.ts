@@ -21,9 +21,15 @@ export const R2Features: ProviderFeatures = {
         videoProcessing: false,
         aiTagging: false,
         facialDetection: false,
+        signedUrls: true,
+        list: true,
+        search: false,
+        copy: true,
+        download: true,
+        updateMetadata: true,
     },
     storage: {
-        maxFileSize: 5 * 1024 * 1024 * 1024, // 5GB
+        maxFileSize: 5 * 1024 * 1024 * 1024 * 1024, // 5 TiB via multipart (5 GiB per single PUT)
         supportedFormats: ['*'], // All formats
     },
 };

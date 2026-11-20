@@ -29,14 +29,17 @@ const uploader = new MediaUploader(
 
 ### Configuration Options
 
-| Option            | Type   | Required | Description                            |
-| ----------------- | ------ | -------- | -------------------------------------- |
-| `accountId`       | string | Yes\*    | Cloudflare account ID                  |
-| `endpoint`        | string | Yes\*    | R2 endpoint (alternative to accountId) |
-| `bucket`          | string | Yes      | R2 bucket name                         |
-| `accessKeyId`     | string | Yes      | R2 API token access key                |
-| `secretAccessKey` | string | Yes      | R2 API token secret key                |
-| `publicUrl`       | string | No       | Custom public URL for the bucket       |
+| Option            | Type     | Required | Description                                               |
+| ----------------- | -------- | -------- | --------------------------------------------------------- |
+| `accountId`       | string   | Yes\*    | Cloudflare account ID                                     |
+| `endpoint`        | string   | Yes\*    | R2 endpoint (alternative to accountId)                    |
+| `jurisdiction`    | string   | No       | `'eu'` or `'fedramp'` endpoints (with `accountId`)        |
+| `bucket`          | string   | Yes      | R2 bucket name                                            |
+| `accessKeyId`     | string   | Yes      | R2 API token access key                                   |
+| `secretAccessKey` | string   | Yes      | R2 API token secret key                                   |
+| `publicUrl`       | string   | No       | Public base URL (omit for a private bucket)               |
+| `appendExtension` | boolean  | No       | Append the detected extension to generated keys           |
+| `client`          | S3Client | No       | Use an existing client                                    |
 
 \*Either `accountId` or `endpoint` is required.
 
@@ -93,6 +96,36 @@ const results = await uploader.uploadMultiple(files, {
 - **Global distribution** - Cloudflare's edge network
 - **Cost-effective** - Only pay for storage and operations
 
+## Signed URLs and File Operations
+
+`R2Provider` is an `S3Provider` configured for R2, so it supports `getSignedUrl`, `createUploadUrl` (content type and exact size are signed), `list`, `copy`, `move`, `download` and `updateMetadata`. R2 has no object ACLs: `public: true` on a private bucket (or `public: false` on a public one) is rejected rather than ignored. See [Secure Uploads](/secure-uploads) for browser uploads.
+
+## Cloudflare Workers (bucket bindings)
+
+In a Worker, use the R2 binding directly — no AWS SDK and no credentials:
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { R2BindingProvider } from '@fluxmedia/r2';
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const uploader = new MediaUploader(
+      new R2BindingProvider({
+        bucket: env.MEDIA,
+        // Optional: signed links served by your own Worker route
+        signedUrlBase: 'https://media.example.com/files',
+        signingSecret: env.MEDIA_SECRET,
+      })
+    );
+    const result = await uploader.upload(request.body!, { contentType: 'image/png' });
+    return Response.json(result);
+  },
+};
+```
+
+Bindings cannot presign URLs, so `getSignedUrl()` returns an HMAC-signed link to your route; check it there with `verifySignedUrl()` from `@fluxmedia/core`. Streams must have a known length.
+
 ## Supported Features
 
 R2 is storage-only:
@@ -100,6 +133,7 @@ R2 is storage-only:
 ```typescript
 uploader.supports('transformations.resize'); // false
 uploader.supports('capabilities.signedUploads'); // true
+uploader.supports('capabilities.signedUrls'); // true
 uploader.supports('capabilities.multipartUpload'); // true
 ```
 
@@ -108,14 +142,12 @@ uploader.supports('capabilities.multipartUpload'); // true
 Access the underlying S3-compatible client:
 
 ```typescript
-const client = uploader.provider.native;
+import type { R2Provider } from '@fluxmedia/r2';
+
+const client = await (uploader.provider as R2Provider).getClient();
 
 const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
-const objects = await client.send(
-  new ListObjectsV2Command({
-    Bucket: 'my-bucket',
-  })
-);
+const objects = await client.send(new ListObjectsV2Command({ Bucket: 'my-bucket' }));
 ```
 
 ## Adding Transformations
@@ -129,5 +161,6 @@ CLOUDFLARE_ACCOUNT_ID=your-account-id
 R2_BUCKET=my-bucket
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
+# Optional: omit for a private bucket
 R2_PUBLIC_URL=https://cdn.example.com
 ```

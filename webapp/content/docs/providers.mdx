@@ -4,11 +4,17 @@ FluxMedia supports multiple cloud storage providers through a unified API.
 
 ## Available Providers
 
-| Provider | Package | Transformations | Video Processing |
-|----------|---------|-----------------|------------------|
-| Cloudinary | `@fluxmedia/cloudinary` | Full | Yes |
-| AWS S3 | `@fluxmedia/s3` | No | No |
-| Cloudflare R2 | `@fluxmedia/r2` | No | No |
+| Provider | Package | Transformations | Signed URLs | Signed browser uploads |
+|----------|---------|-----------------|-------------|------------------------|
+| [Cloudinary](/docs/cloudinary) | `@fluxmedia/cloudinary` | Full | Yes | Yes (format enforced) |
+| [AWS S3](/docs/s3) | `@fluxmedia/s3` | No | Yes | Yes (type and size enforced) |
+| [Cloudflare R2](/docs/r2) | `@fluxmedia/r2` | No | Yes | Yes (type and size enforced) |
+| [Google Cloud Storage](/docs/gcs) | `@fluxmedia/gcs` | No | Yes | Yes (type and max size enforced) |
+| [Azure Blob Storage](/docs/azure) | `@fluxmedia/azure` | No | Yes | Yes (not enforced) |
+| [Local filesystem](/docs/local) | `@fluxmedia/local` | No | Yes (HMAC) | No |
+| In-memory | `@fluxmedia/core` (`MemoryProvider`) | No | Yes (HMAC) | No |
+
+All providers support `list`, `copy`, `move`, `download`, `exists` and `updateMetadata`. Search is Cloudinary-only.
 
 ## Choosing a Provider
 
@@ -23,18 +29,34 @@ Best for: **Applications needing image/video transformations**
 ### AWS S3
 Best for: **Simple file storage with AWS integration**
 
-- Reliable and widely used
-- Integrates well with AWS ecosystem
-- Use with CloudFront + Lambda@Edge for transformations
-- Pay only for storage and transfer
+- Reliable and widely used; IAM roles and the default credential chain work out of the box
+- CloudFront for delivery (`publicUrl`), Lambda@Edge for transformations
+- Also covers S3-compatible services: MinIO, Backblaze B2, Wasabi, DigitalOcean Spaces, Supabase Storage
 
 ### Cloudflare R2
 Best for: **Cost-effective storage with zero egress fees**
 
-- S3-compatible API
+- S3-compatible API, or bucket bindings inside Cloudflare Workers
 - No egress fees (great for high-traffic)
 - Use with Cloudflare Images for transformations
-- Fast global distribution via Cloudflare network
+
+### Google Cloud Storage
+Best for: **Applications on Google Cloud**
+
+- Application Default Credentials (Workload Identity, Cloud Run service accounts)
+- V4 signed URLs with a size cap on browser uploads
+
+### Azure Blob Storage
+Best for: **Applications on Azure**
+
+- Shared key or Microsoft Entra ID (user delegation SAS)
+- Block blob streaming for large files
+
+### Local filesystem
+Best for: **Development, tests and single-server self-hosting**
+
+- No account or SDK needed
+- Includes a file-serving handler with safe headers and signed-URL checks
 
 ## Custom Providers
 
@@ -42,34 +64,41 @@ You can create custom providers by implementing the `MediaProvider` interface:
 
 ```typescript
 import type { MediaProvider, UploadResult } from '@fluxmedia/core';
+import { buildStorageKey, assertSafeKey, detectContentInfo, toPersistedMetadata } from '@fluxmedia/core';
 
 class MyProvider implements MediaProvider {
   name = 'my-provider';
-  
+
   features = {
     transformations: { resize: false, crop: false, ... },
-    capabilities: { signedUploads: true, ... },
+    capabilities: { signedUploads: true, signedUrls: true, list: true, ... },
     storage: { maxFileSize: 100_000_000, supportedFormats: ['*'] },
   };
 
   async upload(file, options) {
+    const key = buildStorageKey(options ?? {});            // sanitized key
+    const info = await detectContentInfo(file, options);    // type from content
+    const metadata = toPersistedMetadata(options?.metadata); // primitives only
     // Your upload logic
-    return { id, url, ... };
+    return { id: key, storageKey: key, url, ... };
   }
 
-  async delete(id) { ... }
-  async get(id) { ... }
-  getUrl(id, transform?) { ... }
+  async delete(id, options?) { assertSafeKey(id, this.name); ... }
+  async get(id, options?) { ... }
+  getUrl(id, transform?, options?) { ... }
   async uploadMultiple(files, options) { ... }
-  async deleteMultiple(ids) { ... }
+  async deleteMultiple(ids, options?) { ... }
   get native() { return this.client; }
+
+  // Optional: getSignedUrl, createUploadUrl, exists, list, search,
+  // copy, move, download, updateMetadata
 }
 ```
 
-Use contract tests to verify your provider implementation:
+`MediaUploader` throws a `NOT_SUPPORTED` error for optional methods your provider leaves out. Use contract tests to verify your provider implementation:
 
 ```typescript
-import { createProviderContractTests } from '@fluxmedia/core';
+import { createProviderContractTests } from '@fluxmedia/core/testing';
 
 createProviderContractTests('MyProvider', () => new MyProvider({ ... }));
 ```

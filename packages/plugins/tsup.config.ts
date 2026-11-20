@@ -9,5 +9,5 @@ export default defineConfig({
   sourcemap: false,
   clean: true,
   treeshake: true,
-  external: ['@fluxmedia/core', 'sharp', 'crypto'],
+  external: ['@fluxmedia/core', 'sharp', 'exif-reader', /^node:/],
 });

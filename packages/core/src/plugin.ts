@@ -1,6 +1,21 @@
 import type { UploadOptions, UploadResult, UploadInput, TransformationOptions } from './types';
 
 /**
+ * Function that performs an upload. Passed to `wrapUpload` hooks.
+ */
+export type UploadFn = (file: UploadInput, options: UploadOptions) => Promise<UploadResult>;
+
+/**
+ * Context passed to `afterUpload` hooks.
+ */
+export interface AfterUploadContext {
+  /** The (possibly transformed) file that was uploaded. */
+  file: UploadInput;
+  /** The options the upload ran with, after all beforeUpload hooks. */
+  options: UploadOptions;
+}
+
+/**
  * Discriminator for which phase of the upload lifecycle an error occurred in.
  */
 export type UploadPhase = 'beforeUpload' | 'upload' | 'afterUpload';
@@ -23,7 +38,15 @@ export interface PluginHooks {
    * Called after successful upload.
    * Can modify or enrich the result.
    */
-  afterUpload?: (result: UploadResult) => Promise<UploadResult>;
+  afterUpload?: (result: UploadResult, context: AfterUploadContext) => Promise<UploadResult>;
+
+  /**
+   * Wrap the provider upload call. Receives the next upload function and
+   * returns a replacement — use it to retry, short-circuit (deduplicate),
+   * time or otherwise control the upload itself. The first registered plugin
+   * is the outermost wrapper.
+   */
+  wrapUpload?: (next: UploadFn) => UploadFn;
 
   /**
    * Called when an error occurs during the upload lifecycle.
@@ -267,7 +290,10 @@ export class PluginManager {
   /**
    * Run afterUpload hooks for all plugins.
    */
-  async runAfterUpload(result: UploadResult): Promise<UploadResult> {
+  async runAfterUpload(
+    result: UploadResult,
+    context: AfterUploadContext = { file: new Uint8Array(0) as unknown as UploadInput, options: {} }
+  ): Promise<UploadResult> {
     this.rebuildCacheIfNeeded();
 
     let currentResult = result;
@@ -275,7 +301,7 @@ export class PluginManager {
     for (const plugin of this.orderedPlugins) {
       if (plugin.hooks.afterUpload) {
         try {
-          currentResult = await plugin.hooks.afterUpload(currentResult);
+          currentResult = await plugin.hooks.afterUpload(currentResult, context);
         } catch (err) {
           if (plugin.optional) {
             console.warn(
@@ -290,6 +316,18 @@ export class PluginManager {
     }
 
     return currentResult;
+  }
+
+  /**
+   * Compose all `wrapUpload` hooks around a base upload function.
+   * The first registered plugin becomes the outermost wrapper.
+   */
+  composeUpload(base: UploadFn): UploadFn {
+    this.rebuildCacheIfNeeded();
+    return this.orderedPlugins.reduceRight<UploadFn>(
+      (next, plugin) => (plugin.hooks.wrapUpload ? plugin.hooks.wrapUpload(next) : next),
+      base
+    );
   }
 
   /**

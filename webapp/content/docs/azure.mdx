@@ -1,0 +1,50 @@
+# Azure Blob Storage Provider
+
+Azure Blob Storage provider for [FluxMedia](https://www.fluxmedia.dev).
+
+```bash
+pnpm add @fluxmedia/core @fluxmedia/azure @azure/storage-blob
+```
+
+```typescript
+import { MediaUploader } from '@fluxmedia/core';
+import { AzureBlobProvider } from '@fluxmedia/azure';
+
+// Shared key
+const uploader = new MediaUploader(
+  new AzureBlobProvider({
+    container: 'media',
+    connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+    publicUrl: false, // private container: serve with getSignedUrl()
+  })
+);
+
+// Or Microsoft Entra ID (signed URLs then use a user delegation SAS)
+import { DefaultAzureCredential } from '@azure/identity';
+new AzureBlobProvider({
+  container: 'media',
+  accountName: 'myaccount',
+  credential: new DefaultAzureCredential(),
+});
+```
+
+- Buffers upload with `uploadData`; streams and Files stream in 8 MB blocks, with byte progress and cancel (`signal`).
+- `getSignedUrl()` returns a read SAS (account key or user delegation key, max 7 days).
+- `createUploadUrl()` returns a create/write SAS for a `PUT` with `x-ms-blob-type: BlockBlob`. Azure SAS cannot restrict content type or size, so check uploads afterwards or use the proxy handler when that matters.
+- Metadata keys are converted to valid identifiers (`user-id` becomes `user_id`).
+- Supports `list` (continuation tokens), `copy`, `move`, `download`, `updateMetadata` and `exists`.
+
+## Configuration
+
+| Option             | Type              | Description                                               |
+| ------------------ | ----------------- | --------------------------------------------------------- |
+| `container`        | string            | Container name (required)                                 |
+| `connectionString` | string            | Storage account connection string                         |
+| `accountName`      | string            | Account name, with `accountKey` or `credential`           |
+| `accountKey`       | string            | Shared key                                                |
+| `credential`       | TokenCredential   | Entra ID credential                                       |
+| `serviceClient`    | BlobServiceClient | Existing client                                           |
+| `publicUrl`        | string \| false   | CDN/base URL, `false` for private, unset for the blob URL |
+| `appendExtension`  | boolean           | Append the detected extension to keys                     |
+| `blockSize`        | number            | Block size for streamed uploads (default 8 MB)            |
+| `concurrency`      | number            | Parallel block uploads (default 4)                        |

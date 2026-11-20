@@ -1,45 +1,52 @@
 import { describe, it, expect, vi } from 'vitest';
+import { Readable } from 'node:stream';
 import { createRetryPlugin, withRetry, getRetryConfig } from '../index';
 import { MediaError, MediaErrorCode, PartialUploadError } from '@fluxmedia/core';
 import type { PartialUploadContext } from '@fluxmedia/core';
 
 describe('RetryPlugin', () => {
   describe('createRetryPlugin', () => {
-    it('should add retry config to metadata', async () => {
-      const plugin = createRetryPlugin({
-        maxRetries: 5,
-        retryDelay: 500,
-      });
+    it('should retry the wrapped upload on retryable errors', async () => {
+      const plugin = createRetryPlugin({ maxRetries: 2, retryDelay: 1, jitter: false });
+      const next = vi
+        .fn()
+        .mockRejectedValueOnce(new MediaError('down', MediaErrorCode.NETWORK_ERROR, 'p'))
+        .mockResolvedValueOnce({ id: 'ok' });
 
-      const file = Buffer.from('test');
+      const upload = plugin.hooks.wrapUpload!(next);
+      await expect(upload(Buffer.from('test'), {})).resolves.toEqual({ id: 'ok' });
+      expect(next).toHaveBeenCalledTimes(2);
+    });
 
-      const result = await plugin.hooks.beforeUpload!(file, {});
+    it('should not retry stream uploads', async () => {
+      const plugin = createRetryPlugin({ maxRetries: 3, retryDelay: 1 });
+      const next = vi.fn().mockRejectedValue(new MediaError('down', MediaErrorCode.NETWORK_ERROR, 'p'));
+      const upload = plugin.hooks.wrapUpload!(next);
+      await expect(upload(Readable.from([Buffer.from('x')]), {})).rejects.toThrow('down');
+      expect(next).toHaveBeenCalledTimes(1);
+    });
 
-      expect(result).toBeDefined();
-      expect(result!.options.metadata?._retry).toMatchObject({
-        maxRetries: 5,
-        currentAttempt: 0,
-      });
+    it('should not retry aborted uploads and stops waiting on abort', async () => {
+      const plugin = createRetryPlugin({ maxRetries: 3, retryDelay: 10_000 });
+      const controller = new AbortController();
+      const next = vi.fn().mockRejectedValue(new MediaError('down', MediaErrorCode.NETWORK_ERROR, 'p'));
+      const promise = plugin.hooks.wrapUpload!(next)(Buffer.from('x'), { signal: controller.signal });
+      setTimeout(() => controller.abort(), 5);
+      await expect(promise).rejects.toMatchObject({ code: MediaErrorCode.ABORTED });
+      expect(next).toHaveBeenCalledTimes(1);
     });
 
     it('should use default options', async () => {
       const plugin = createRetryPlugin();
 
       expect(plugin.name).toBe('retry');
-      expect(plugin.version).toBe('1.0.0');
+      expect(plugin.version).toBe('2.0.0');
     });
   });
 
   describe('getRetryConfig', () => {
-    it('should extract retry config from options', async () => {
-      const plugin = createRetryPlugin({ maxRetries: 3 });
-      const file = Buffer.from('test');
-
-      const result = await plugin.hooks.beforeUpload!(file, {});
-      const config = getRetryConfig(result!.options);
-
-      expect(config).toBeDefined();
-      expect(config!.maxRetries).toBe(3);
+    it('is deprecated and returns undefined unless set manually', () => {
+      expect(getRetryConfig({})).toBeUndefined();
     });
   });
 });
@@ -129,6 +136,7 @@ describe('withRetry', () => {
         maxRetries: 3,
         retryDelay: 100,
         exponentialBackoff: true,
+        jitter: false,
         onRetry,
       });
 

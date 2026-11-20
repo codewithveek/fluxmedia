@@ -138,7 +138,7 @@ function createR2Uploader() {
             bucket: process.env.R2_BUCKET || 'my-bucket',
             accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
             secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-            publicUrl: process.env.R2_PUBLIC_URL, // Required for getUrl()
+            publicUrl: process.env.R2_PUBLIC_URL, // Optional: omit for private buckets
         })
     );
 }

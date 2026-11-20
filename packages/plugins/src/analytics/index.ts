@@ -4,7 +4,17 @@
  * Provides environment-aware logging and analytics tracking for uploads.
  */
 
-import { UploadInput, type FluxMediaPlugin, type UploadOptions, type UploadResult } from '@fluxmedia/core';
+import {
+  type UploadInput,
+  type FluxMediaPlugin,
+  type UploadOptions,
+  type UploadResult,
+  type AfterUploadContext,
+  getInputName,
+  getInputSize,
+  randomId,
+} from '@fluxmedia/core';
+import { formatBytes } from '../utils';
 
 /**
  * Log level types
@@ -30,7 +40,8 @@ export type AnalyticsEventType =
  */
 export interface UploadStartedEventData {
   fileName: string;
-  fileSize: number;
+  /** Size in bytes; undefined for streams. */
+  fileSize: number | undefined;
   folder?: string | undefined;
   uploadId: string;
 }
@@ -61,6 +72,8 @@ export interface DeleteCompletedEventData {
  */
 export interface ErrorEventData {
   operation: 'upload' | 'delete' | 'get';
+  /** Upload lifecycle phase where the error happened. */
+  phase?: string;
   error: {
     message: string;
     name: string;
@@ -108,19 +121,6 @@ export interface AnalyticsOptions {
   trackPerformance?: boolean;
   /** Enable console logging (default: true) */
   console?: boolean;
-}
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 /**
@@ -216,15 +216,9 @@ export function createAnalyticsPlugin(options: AnalyticsOptions = {}): FluxMedia
         file: UploadInput,
         uploadOptions: UploadOptions
       ): Promise<{ file: UploadInput; options: UploadOptions } | void> {
-        const fileName =
-          typeof File !== 'undefined' && file instanceof File
-            ? file.name
-            : uploadOptions.filename || 'unknown';
-        const fileSize =
-          typeof File !== 'undefined' && file instanceof File
-            ? file.size
-            : (file as Buffer).byteLength;
-        const uploadId = `${fileName}-${Date.now()}`;
+        const fileName = getInputName(file) ?? uploadOptions.filename ?? 'unknown';
+        const fileSize = getInputSize(file);
+        const uploadId = randomId(16);
 
         // Store start time
         if (config.trackPerformance) {
@@ -246,21 +240,22 @@ export function createAnalyticsPlugin(options: AnalyticsOptions = {}): FluxMedia
 
         log('info', `Upload started: ${fileName} (${formatBytes(fileSize)})`);
 
-        // Store uploadId in metadata for afterUpload
+        // Correlate with afterUpload/onError through an internal metadata key
+        // ("_" keys are never persisted by providers)
         const enrichedOptions: UploadOptions = {
           ...uploadOptions,
           metadata: {
             ...uploadOptions.metadata,
             _analyticsUploadId: uploadId,
-            _analyticsFile: file,
           },
         };
 
         return { file, options: enrichedOptions };
       },
 
-      async afterUpload(result: UploadResult): Promise<UploadResult> {
-        const uploadId = result.metadata?._analyticsUploadId as string | undefined;
+      async afterUpload(result: UploadResult, context?: AfterUploadContext): Promise<UploadResult> {
+        const uploadId = (context?.options.metadata?._analyticsUploadId ??
+          result.metadata?._analyticsUploadId) as string | undefined;
 
         // Calculate duration
         let duration = 0;
@@ -301,12 +296,12 @@ export function createAnalyticsPlugin(options: AnalyticsOptions = {}): FluxMedia
         // Add performance data to result metadata (excluding internal props)
         const cleanMetadata = { ...result.metadata };
         delete cleanMetadata._analyticsUploadId;
-        delete cleanMetadata._analyticsFile;
 
         if (config.trackPerformance) {
           cleanMetadata.performance = {
             duration,
-            uploadSpeed: result.size / (duration / 1000), // bytes per second
+            // bytes per second; undefined when the duration is too short to measure
+            uploadSpeed: duration > 0 ? Math.round(result.size / (duration / 1000)) : undefined,
           };
         }
 
@@ -338,6 +333,8 @@ export function createAnalyticsPlugin(options: AnalyticsOptions = {}): FluxMedia
         }
       ): Promise<void> {
         totalErrors++;
+        const uploadId = context.options?.metadata?._analyticsUploadId as string | undefined;
+        if (uploadId) uploadStartTimes.delete(uploadId);
 
         // Call onUploadError callback
         if (options.onUploadError) {
@@ -347,6 +344,7 @@ export function createAnalyticsPlugin(options: AnalyticsOptions = {}): FluxMedia
         // Track error event
         track('media.error', {
           operation: 'upload',
+          ...(context.phase && { phase: context.phase }),
           error: {
             message: error.message,
             name: error.name,

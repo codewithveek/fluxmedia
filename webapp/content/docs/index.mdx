@@ -6,16 +6,17 @@ FluxMedia is a unified API for uploading images, videos, and files to any cloud 
 
 ## Features
 
-- **Unified API** - Use Cloudinary, S3, R2, and more with one interface
-- **Consistent Interface** - Same code works with any provider
-- **Streaming Support** - Upload from File, Buffer, Readable, or ReadableStream
-- **Fallback Providers** - Automatic failover when primary provider fails
-- **Transactional Uploads** - Atomic upload-then-commit with rollback support
-- **React Hooks** - `useMediaUpload` for easy integration
-- **Plugin System** - Extensible with lifecycle hooks, optional plugins, and graceful degradation
-- **Structured Errors** - Typed error codes with partial upload recovery
-- **Tree-shakeable** - Only bundle what you use
-- **Fully Tested** - 179 tests across all packages
+- **Unified API** - Use Cloudinary, S3, R2, Google Cloud Storage, Azure Blob Storage or the local filesystem with one interface
+- **Secure browser uploads** - Server handlers that authenticate, check type (by content) and size, and choose the folder on the server; signed upload URLs that enforce type and size on S3/R2
+- **Private files** - Optional public URLs and time-limited signed download URLs on every provider
+- **File operations** - Get, delete (batched), list with cursors, copy, move, download streams, metadata updates
+- **Streaming Support** - Upload from File, Buffer, Readable, or ReadableStream, with byte progress and cancel
+- **Fallback Providers** - Automatic failover when the primary provider fails
+- **Transactional Uploads** - Upload-then-commit with rollback
+- **React Hooks** - `useMediaUpload`, `useMediaUploadQueue` and a drag-and-drop component
+- **Plugin System** - Validation, optimization, virus scanning, dedupe, placeholders, retry, analytics, or your own
+- **Structured Errors** - Typed error codes (`ABORTED`, `NOT_SUPPORTED`, `RATE_LIMITED`, …)
+- **Tree-shakeable** - SDKs are peer dependencies and load lazily
 
 ## Quick Start
 
@@ -48,12 +49,15 @@ console.log(result.storageKey); // Provider-specific storage key
 
 | Package | Description |
 |---------|-------------|
-| `@fluxmedia/core` | Core types, MediaUploader, plugin system, file type detection |
+| `@fluxmedia/core` | MediaUploader, plugin system, server upload handlers (`@fluxmedia/core/server`), in-memory provider, signed-URL helpers, file type detection |
 | `@fluxmedia/cloudinary` | Cloudinary provider with transformations |
-| `@fluxmedia/s3` | AWS S3 provider |
-| `@fluxmedia/r2` | Cloudflare R2 provider |
+| `@fluxmedia/s3` | AWS S3 and S3-compatible storage (MinIO, B2, Wasabi, Spaces, Supabase) |
+| `@fluxmedia/r2` | Cloudflare R2 (S3 API, or Workers bucket bindings) |
+| `@fluxmedia/gcs` | Google Cloud Storage |
+| `@fluxmedia/azure` | Azure Blob Storage |
+| `@fluxmedia/local` | Local filesystem |
 | `@fluxmedia/react` | React hooks and components |
-| `@fluxmedia/plugins` | Official plugins: validation, optimization, metadata, analytics, retry |
+| `@fluxmedia/plugins` | Official plugins: validation, optimization, metadata, virus scanning, dedupe, placeholders, analytics, retry |
 
 ## Why FluxMedia?
 

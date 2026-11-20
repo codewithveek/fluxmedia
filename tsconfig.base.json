@@ -30,6 +30,8 @@
     "rootDir": ".",
     "paths": {
       "@fluxmedia/core": ["./packages/core/src"],
+      "@fluxmedia/core/server": ["./packages/core/src/server.ts"],
+      "@fluxmedia/core/testing": ["./packages/core/src/testing.ts"],
       "@fluxmedia/cloudinary": ["./packages/cloudinary/src"],
       "@fluxmedia/s3": ["./packages/s3/src"],
       "@fluxmedia/r2": ["./packages/r2/src"],

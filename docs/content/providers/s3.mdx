@@ -26,27 +26,39 @@ const uploader = new MediaUploader(
 
 ### Configuration Options
 
-| Option            | Type    | Required | Description                                  |
-| ----------------- | ------- | -------- | -------------------------------------------- |
-| `region`          | string  | Yes      | AWS region (e.g., 'us-east-1')               |
-| `bucket`          | string  | Yes      | S3 bucket name                               |
-| `accessKeyId`     | string  | Yes      | AWS access key                               |
-| `secretAccessKey` | string  | Yes      | AWS secret key                               |
-| `endpoint`        | string  | No       | Custom endpoint (for S3-compatible services) |
-| `forcePathStyle`  | boolean | No       | Force path style URLs                        |
+| Option            | Type                | Required | Description                                                                 |
+| ----------------- | ------------------- | -------- | --------------------------------------------------------------------------- |
+| `region`          | string              | Yes\*    | AWS region (e.g., 'us-east-1')                                              |
+| `bucket`          | string              | Yes      | S3 bucket name                                                              |
+| `accessKeyId`     | string              | No       | Access key. Without keys, the AWS default credential chain is used (IAM roles, SSO, env vars) |
+| `secretAccessKey` | string              | No       | Secret key (required with `accessKeyId`)                                    |
+| `sessionToken`    | string              | No       | Temporary (STS) credentials                                                 |
+| `credentials`     | object / provider   | No       | Credentials or a credential provider                                        |
+| `client`          | S3Client            | No       | Use an existing client                                                      |
+| `clientConfig`    | object              | No       | Extra `S3Client` options                                                    |
+| `endpoint`        | string              | No       | Custom endpoint (for S3-compatible services)                                |
+| `forcePathStyle`  | boolean             | No       | Force path style URLs                                                       |
+| `publicUrl`       | string \| false     | No       | CDN base URL (CloudFront), or `false` for a private bucket                  |
+| `useAcl`          | boolean             | No       | Apply `public` as an object ACL (ACL-enabled buckets only)                  |
+| `appendExtension` | boolean             | No       | Append the detected extension to generated keys                             |
+| `multipart`       | object              | No       | `{ partSize, queueSize }` for multipart uploads                             |
+
+\*Not required when you pass `client`.
 
 ## Basic Usage
 
 ```typescript
 const result = await uploader.upload(file, {
   folder: 'uploads',
-  filename: 'my-file.jpg',
+  filename: 'photo',
 });
 
+console.log(result.storageKey); // uploads/photo-x1y2z3a4 (random suffix unless uniqueFilename: false)
 console.log(result.url);
-// https://my-media-bucket.s3.us-east-1.amazonaws.com/uploads/my-file.jpg
-console.log(result.storageKey); // uploads/my-file.jpg
+// https://my-media-bucket.s3.us-east-1.amazonaws.com/uploads/photo-x1y2z3a4
 ```
+
+Folders and filenames are sanitized, so a key can never escape the bucket root. Only top-level string, number and boolean `metadata` values are stored (as `x-amz-meta-*` headers).
 
 ## Upload with Progress
 
@@ -78,33 +90,79 @@ const results = await uploader.uploadMultiple(files, {
 
 ## S3-Compatible Services
 
-Works with DigitalOcean Spaces, MinIO, and other S3-compatible services:
+Works with MinIO, Backblaze B2, Wasabi, DigitalOcean Spaces, Supabase Storage and other S3-compatible services:
 
 ```typescript
 // DigitalOcean Spaces
-const uploader = new MediaUploader(
-  new S3Provider({
-    region: 'nyc3',
-    bucket: 'my-space',
-    accessKeyId: 'your-spaces-key',
-    secretAccessKey: 'your-spaces-secret',
-    endpoint: 'https://nyc3.digitaloceanspaces.com',
-    forcePathStyle: false,
-  })
-);
+new S3Provider({
+  region: 'nyc3',
+  bucket: 'my-space',
+  accessKeyId: 'your-spaces-key',
+  secretAccessKey: 'your-spaces-secret',
+  endpoint: 'https://nyc3.digitaloceanspaces.com',
+});
 
 // MinIO
-const uploader = new MediaUploader(
-  new S3Provider({
-    region: 'us-east-1',
-    bucket: 'my-bucket',
-    accessKeyId: 'minio-access-key',
-    secretAccessKey: 'minio-secret-key',
-    endpoint: 'http://localhost:9000',
-    forcePathStyle: true,
-  })
-);
+new S3Provider({
+  region: 'us-east-1',
+  bucket: 'my-bucket',
+  accessKeyId: 'minio-access-key',
+  secretAccessKey: 'minio-secret-key',
+  endpoint: 'http://localhost:9000',
+  forcePathStyle: true,
+});
+
+// Backblaze B2
+new S3Provider({
+  region: 'us-west-004',
+  bucket: 'my-bucket',
+  accessKeyId: process.env.B2_KEY_ID,
+  secretAccessKey: process.env.B2_APPLICATION_KEY,
+  endpoint: 'https://s3.us-west-004.backblazeb2.com',
+});
+
+// Supabase Storage (S3 protocol)
+new S3Provider({
+  region: 'us-east-1',
+  bucket: 'media',
+  accessKeyId: process.env.SUPABASE_S3_KEY_ID,
+  secretAccessKey: process.env.SUPABASE_S3_SECRET,
+  endpoint: 'https://<project-ref>.supabase.co/storage/v1/s3',
+  forcePathStyle: true,
+});
 ```
+
+## Private Buckets and Signed URLs
+
+```typescript
+const uploader = new MediaUploader(
+  new S3Provider({ region: 'us-east-1', bucket: 'private-bucket', publicUrl: false })
+);
+
+const result = await uploader.upload(file);    // result.publicUrl is undefined
+const url = await uploader.getSignedUrl(result, { expiresIn: 300, downloadAs: 'report.pdf' });
+```
+
+For direct browser uploads, `createUploadUrl` returns a presigned `PUT` whose content type and exact size are part of the signature, so S3 rejects any other file. Expose it through `createSignedUploadHandler` — see [Secure Uploads](/secure-uploads). Signed URLs need `@aws-sdk/s3-request-presigner`.
+
+## CloudFront
+
+```typescript
+new S3Provider({ region: 'us-east-1', bucket: 'media', publicUrl: 'https://d111111abcdef8.cloudfront.net' });
+```
+
+## File Operations
+
+```typescript
+await uploader.list({ folder: 'invoices', limit: 100 });   // ListObjectsV2, cursor-based
+await uploader.copy(result, 'archive/2026/report.pdf');    // CopyObject
+await uploader.move(result, 'archive/report.pdf');         // copy + delete
+await uploader.updateMetadata(result, { status: 'final' }); // keeps storage class and encryption
+const { body } = await uploader.download(result);          // ReadableStream
+await uploader.deleteMultiple(['a.png', 'b.png']);         // DeleteObjects, 1000 per request
+```
+
+Uploads can be cancelled with `signal`; failed multipart uploads are aborted so no orphaned parts are billed.
 
 ## Supported Features
 
@@ -113,7 +171,9 @@ S3 is storage-only (no transformations):
 ```typescript
 uploader.supports('transformations.resize'); // false
 uploader.supports('capabilities.signedUploads'); // true
+uploader.supports('capabilities.signedUrls'); // true
 uploader.supports('capabilities.multipartUpload'); // true
+uploader.supports('capabilities.list'); // true
 ```
 
 ## Native SDK Access
@@ -121,7 +181,9 @@ uploader.supports('capabilities.multipartUpload'); // true
 Access the underlying AWS S3 client for advanced operations:
 
 ```typescript
-const s3Client = uploader.provider.native;
+import type { S3Provider } from '@fluxmedia/s3';
+
+const s3Client = await (uploader.provider as S3Provider).getClient();
 
 const { ListBucketsCommand } = await import('@aws-sdk/client-s3');
 const buckets = await s3Client.send(new ListBucketsCommand({}));
