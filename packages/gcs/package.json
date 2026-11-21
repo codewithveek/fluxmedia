@@ -1,6 +1,6 @@
 {
   "name": "@fluxmedia/gcs",
-  "version": "2.0.3",
+  "version": "3.0.0",
   "description": "Google Cloud Storage provider for FluxMedia - unified media upload library",
   "keywords": [
     "fluxmedia",

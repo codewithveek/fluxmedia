@@ -1,5 +1,17 @@
 # nextjs-app-example
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @fluxmedia/core@3.0.0
+  - @fluxmedia/s3@3.0.0
+  - @fluxmedia/r2@3.0.0
+  - @fluxmedia/cloudinary@3.0.0
+  - @fluxmedia/plugins@3.0.0
+  - @fluxmedia/react@3.0.0
+
 ## 0.0.4
 
 ### Patch Changes
